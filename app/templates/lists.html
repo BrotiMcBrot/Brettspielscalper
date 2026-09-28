@@ -1,0 +1,12 @@
+{% extends "base.html" %}{% block h %}Ranglisten{% endblock %}{% block body %}
+<table><tr><th>Name</th><th>BGG-URL</th><th>Größe</th><th></th></tr>
+{% for l in lists %}<tr><td>{{ l.name }}</td><td class="muted">{{ l.bgg_url }}</td><td>{{ l.size }}</td><td>
+<form method="post" action="{{ url_for('list_action', list_id=l.id, action='refresh') }}" style="display:inline"><button>1. BGG laden</button></form>
+<form method="post" action="{{ url_for('list_action', list_id=l.id, action='scan') }}" style="display:inline"><button>2. Kleinanzeigen scannen</button></form></td></tr>{% endfor %}</table>
+<h3>Neue Liste</h3>
+<form method="post"><p><input type="text" name="name" placeholder="z.B. Top 100 Kampagnenspiele" required></p>
+<p><input type="text" name="url" placeholder="BGG-Browse-/Such-URL (sortiert nach Rang)" list="presets" required>
+<datalist id="presets">{% for n,u in presets.items() %}<option value="{{ u }}">{{ n }}</option>{% endfor %}</datalist></p>
+<p>Anzahl <input type="number" name="size" value="100"> <button>Anlegen</button></p></form>
+<p class="muted">Tipp: Für Kategorien wie „Kampagnenspiele“ oder „Familienspiele“ auf BGG die gewünschte Suche/Browse-Ansicht nach Rang sortieren und die Adresse hier einfügen.</p>
+{% endblock %}
