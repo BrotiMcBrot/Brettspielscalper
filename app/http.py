@@ -24,6 +24,9 @@ def get(url, delay=1.5, **kw):
         r = _session.get(url, timeout=25, **kw)
     finally:
         _last[host] = time.time()
+    # Ohne charset im Header rät requests ISO-8859-1 → "€" wird zu "â\x82¬" und Preise sind unlesbar
+    if "charset" not in r.headers.get("Content-Type", "").lower():
+        r.encoding = "utf-8"
     if r.status_code in (403, 429, 503):
         raise Blocked(f"{host} blockiert automatische Abfragen (HTTP {r.status_code}, Bot-Schutz).")
     return r
