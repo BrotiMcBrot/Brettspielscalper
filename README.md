@@ -46,7 +46,10 @@ Alles passiert in der Weboberfläche mit den drei Reitern **Schnäppchen**, **Ne
      meist deutschen Titel hat (z. B. „Brass: Birmingham“ → „Brass Birmingham“, „Terraforming Mars“ →
      „Terraforming Mars Brettspiel“), trage hier den Titel ein, wie man ihn dort findet. Er wird für beide
      Suchen benutzt.
-5. **„3. Kleinanzeigen scannen“** klicken – sucht zu jedem Spiel Angebote. Das dauert bei 100 Spielen
+5. **„3. Kleinanzeigen scannen“** klicken. Fehlt einem Spiel der Neupreis, schätzt die App ihn dabei
+   automatisch als Median der Anzeigen, die als „NEU“/„OVP“/„ungespielt“ inseriert sind (mind. 2).
+   Manuell eingetragene Preise werden nie überschrieben; Quelle steht im Reiter *Neupreise*.
+   Weiter: – sucht zu jedem Spiel Angebote. Das dauert bei 100 Spielen
    mehrere Minuten (bewusst 1,5 s Pause pro Anfrage). Fortschritt: Seite neu laden.
 6. **Reiter *Schnäppchen*:** Liste wählen, Prozentgrenze einstellen, „Zeigen“. Angezeigt werden nur
    Angebote von Spielen mit bekanntem Neupreis. Ein Klick auf den Titel öffnet die Anzeige.

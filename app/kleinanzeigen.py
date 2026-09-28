@@ -81,3 +81,19 @@ def find_offers(game_name, search_name=None):
         raise RuntimeError(f"Kleinanzeigen: HTTP {resp.status_code} für '{name}'")
     raw = parse_results(resp.text)
     return [o for o in raw if o["price"] is not None and o["price"] >= MIN_PRICE and matches(name, o["title"])], len(raw)
+
+
+NEW_WORDS = {"neu", "ovp", "eingeschweisst", "eingeschweist", "sealed", "ungespielt", "originalverpackt", "new"}
+USED_WORDS = {"gebraucht", "gespielt", "bespielt"}
+
+
+def estimate_new_price(offers):
+    """Neupreis-Schätzung: Median der Angebote, die sich als neu/OVP/ungespielt ausweisen (mind. 2 nötig)."""
+    from statistics import median
+    from .matching import tokens
+    prices = []
+    for o in offers:
+        t = set(tokens(o["title"]))
+        if t & NEW_WORDS and not t & USED_WORDS:
+            prices.append(o["price"])
+    return (round(median(prices), 2), len(prices)) if len(prices) >= 2 else (None, len(prices))

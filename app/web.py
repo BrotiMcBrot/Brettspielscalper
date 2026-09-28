@@ -72,7 +72,9 @@ def save_prices():
             con.execute("UPDATE games SET search_name=? WHERE bgg_id=?",
                         (request.form.get(f"alias_{gid}", "").strip() or None, gid))
             if val:
-                db.set_price(con, gid, float(val), "manuell")
+                old = con.execute("SELECT new_price FROM games WHERE bgg_id=?", (gid,)).fetchone()[0]
+                if old is None or abs(old - float(val)) > 0.001:  # nur echte Änderungen gelten als manuell
+                    db.set_price(con, gid, float(val), "manuell")
             else:
                 con.execute("UPDATE games SET new_price=NULL WHERE bgg_id=?", (gid,))
     con.commit()

@@ -2,6 +2,7 @@
 from . import bgg, db, geizhals, kleinanzeigen
 from .http import Blocked
 
+ESTIMATE = "Kleinanzeigen-Schätzung"
 BLOCKED_HINT = "Nichts von der Seite lesbar (Bot-Schutz oder geändertes Layout?) – bitte `python -m app check` ausführen."
 
 
@@ -22,11 +23,17 @@ def _games(con, list_id):
 
 
 def scan_offers(con, list_id, progress=None):
-    games, errors, raw_total, offers_total, with_offers = _games(con, list_id), [], 0, 0, 0
+    games, errors, raw_total, offers_total, with_offers, estimated = _games(con, list_id), [], 0, 0, 0, 0
     for i, g in enumerate(games, 1):
         try:
             offers, raw = kleinanzeigen.find_offers(g["name"], g["search_name"])
             db.replace_offers(con, g["bgg_id"], offers)
+            # Neupreis aus NEU/OVP-Anzeigen schätzen – nur wenn keiner da ist oder der alte selbst geschätzt war
+            if not g["new_price"] or (g["price_note"] or "").startswith(ESTIMATE):
+                est, n = kleinanzeigen.estimate_new_price(offers)
+                if est:
+                    db.set_price(con, g["bgg_id"], est, f"{ESTIMATE} (Median aus {n} NEU/OVP-Anzeigen)")
+                    estimated += 1
             raw_total += raw
             offers_total += len(offers)
             with_offers += bool(offers)
@@ -39,7 +46,7 @@ def scan_offers(con, list_id, progress=None):
             progress(i, len(games), g["name"])
     if not raw_total and not errors:
         errors.insert(0, BLOCKED_HINT)
-    return errors, f"{len(games)} Spiele durchsucht, {raw_total} Anzeigen gelesen, {offers_total} passende Angebote für {with_offers} Spiele."
+    return errors, f"{len(games)} Spiele durchsucht, {raw_total} Anzeigen gelesen, {offers_total} passende Angebote für {with_offers} Spiele, {estimated} Neupreise aus NEU/OVP-Anzeigen geschätzt."
 
 
 def fetch_prices(con, list_id, progress=None, overwrite=False):

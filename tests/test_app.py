@@ -80,3 +80,11 @@ def test_bgg_csv():
     txt = "id,name,yearpublished,rank,is_expansion,strategygames_rank\n1,B,2000,2,0,1\n2,A,2001,1,0,0\n3,E,2002,3,1,2\n"
     assert [r[2] for r in bgg.parse_csv(txt)] == ["A", "B"]
     assert [r[2] for r in bgg.parse_csv(txt, "strategygames_rank")] == ["B"]
+
+
+def test_estimate_new_price():
+    mk = lambda t, p: {"title": t, "price": p}  # noqa: E731
+    offers = [mk("Brass Birmingham NEU OVP", 60), mk("Brass Birmingham neu", 70), mk("Brass Birmingham gebraucht neuwertig", 30),
+              mk("Brass Birmingham", 25)]
+    assert kleinanzeigen.estimate_new_price(offers) == (65, 2)
+    assert kleinanzeigen.estimate_new_price(offers[:1])[0] is None
