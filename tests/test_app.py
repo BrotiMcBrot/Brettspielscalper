@@ -3,7 +3,7 @@ import tempfile
 
 os.environ["BSS_DB"] = os.path.join(tempfile.mkdtemp(), "t.db")
 
-from app import bgg, db, kleinanzeigen, matching  # noqa: E402
+from app import geizhals, bgg, db, kleinanzeigen, matching  # noqa: E402
 
 BGG_HTML = """<table><tr id='row_'><td class='collection_rank'><a name='1'></a>1</td>
 <td class='collection_objectname'><div><a href='/boardgame/224517/brass-birmingham' class='primary'>Brass: Birmingham</a>
@@ -45,3 +45,14 @@ def test_deals_threshold():
         {"ad_id": "a", "title": "x", "price": 25, "negotiable": False, "location": "", "url": "u"},
         {"ad_id": "b", "title": "y", "price": 45, "negotiable": False, "location": "", "url": "u"}])
     assert [r["ad_id"] for r in db.deals(con, lid, 0.5)] == ["a"]
+
+
+GH_HTML = """<div class="listview__item"><a class="listview__name-link" href="/brass-birmingham-a2100000.html">Brass: Birmingham</a>
+<div class="price">ab € 49,99</div></div>
+<div class="listview__item"><a href="/brass-birmingham-erweiterung-a3.html">Brass Birmingham Erweiterung</a><span>€ 12,00</span></div>"""
+
+
+def test_geizhals_parse():
+    res = geizhals.parse_results(GH_HTML)
+    assert [r["price"] for r in res] == [49.99, 12.0]
+    assert [r["name"] for r in res if matching.matches("Brass: Birmingham", r["name"])] == ["Brass: Birmingham"]

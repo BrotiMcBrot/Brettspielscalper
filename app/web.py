@@ -16,7 +16,11 @@ app.jinja_env.globals["job"] = job
 def _run(kind, list_id):
     con = db.connect()
     try:
-        if kind == "refresh":
+        if kind == "prices":
+            errors, missing = scan.fetch_prices(
+                con, list_id, lambda i, n, name: job.update(text=f"Geizhals {i}/{n}: {name}"))
+            job["errors"] = errors + [f"Kein Treffer: {n}" for n in missing]
+        elif kind == "refresh":
             job["text"] = "Lade BGG-Rangliste …"
             scan.refresh_list(con, list_id)
         else:
@@ -105,6 +109,6 @@ def lists_page():
 
 @app.post("/lists/<int:list_id>/<action>")
 def list_action(list_id, action):
-    if action in ("refresh", "scan"):
+    if action in ("refresh", "prices", "scan"):
         _start(action, list_id)
     return redirect(request.referrer or url_for("lists_page"))
