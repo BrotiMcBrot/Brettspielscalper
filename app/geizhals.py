@@ -43,13 +43,14 @@ def parse_results(html):
 
 
 def find_price(game_name, search_name=None):
-    """-> (preis, notiz) oder None, wenn kein passendes Produkt gefunden wurde."""
+    """-> ((preis, notiz) oder None, Anzahl roh gelesener Produkte)"""
     name = search_name or game_name
     resp = http.get(search_url(name))
     if resp.status_code != 200:
         raise RuntimeError(f"Geizhals: HTTP {resp.status_code} für '{name}'")
-    hits = [r for r in parse_results(resp.text) if r["price"] >= 3 and matches(name, r["name"])]
+    raw = parse_results(resp.text)
+    hits = [r for r in raw if r["price"] >= 3 and matches(name, r["name"])]
     if not hits:
-        return None
+        return None, len(raw)
     best = min(hits, key=lambda r: r["price"])
-    return best["price"], f"Geizhals: {best['name']} – {best['url']}"
+    return (best["price"], f"Geizhals: {best['name']} – {best['url']}"), len(raw)

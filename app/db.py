@@ -108,3 +108,16 @@ def deals(con, list_id, max_ratio):
            ORDER BY ratio""",
         (list_id, max_ratio),
     ).fetchall()
+
+
+def add_manual_games(con, list_id, names):
+    """Spiele ohne BGG-Abruf anlegen (negative IDs), z.B. wenn BGG den Zugriff blockiert."""
+    rank = (con.execute("SELECT COALESCE(MAX(rank),0) FROM list_items WHERE list_id=?", (list_id,)).fetchone()[0])
+    for name in (n.strip() for n in names):
+        if not name:
+            continue
+        rank += 1
+        gid = min(0, con.execute("SELECT COALESCE(MIN(bgg_id),0) FROM games").fetchone()[0]) - 1
+        con.execute("INSERT INTO games(bgg_id, name) VALUES (?,?)", (gid, name))
+        con.execute("INSERT INTO list_items(list_id, rank, bgg_id) VALUES (?,?,?)", (list_id, rank, gid))
+    con.commit()

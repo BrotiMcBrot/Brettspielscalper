@@ -57,7 +57,21 @@ Liste einfügen. Spiele, die in mehreren Listen vorkommen, teilen sich Neupreis 
     python -m app prices  <listen-id>   # Neupreise von Geizhals
     python -m app scan    <listen-id>   # Kleinanzeigen scannen
 
-## 4. Probleme?
+## 4. Probleme? Zuerst die Diagnose
+
+    python -m app check          # oder im Browser: Reiter „Diagnose“
+
+Das testet BGG, Geizhals und Kleinanzeigen mit „Brass Birmingham“ und zeigt HTTP-Status, wie viele Einträge
+gelesen wurden und speichert die Roh-Seiten unter `data/debug/*.html`. Bei „HTTP 403“ oder „0 Einträge“ ist die
+Seite blockiert oder hat ihr Layout geändert – die Ausgabe (und ggf. die HTML-Datei) reicht, um den Parser anzupassen.
+
+Nach jedem Lauf zeigt die App eine Zusammenfassung („12 Neupreise gefunden …“, „0 Anzeigen gelesen …“).
+Rot hinterlegte Meldungen sind Fehler. „Fertig“ mit 0 Treffern bedeutet **nicht**, dass es geklappt hat.
+
+**Wenn BGG blockiert:** Beim Anlegen einer Liste die URL leer lassen und die Spielnamen manuell eintragen
+(einer pro Zeile). Dann laufen Geizhals und Kleinanzeigen trotzdem.
+
+
 
 | Symptom | Ursache / Lösung |
 |---|---|

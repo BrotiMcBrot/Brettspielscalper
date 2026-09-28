@@ -9,26 +9,24 @@ app = Flask(__name__)
 PRESETS = {
     "Top 100 Brettspiele": "https://boardgamegeek.com/browse/boardgame",
 }
-job = {"running": False, "text": "", "errors": []}
+job = {"running": False, "failed": False, "text": "", "errors": []}
 app.jinja_env.globals["job"] = job
 
 
 def _run(kind, list_id):
     con = db.connect()
+    progress = lambda i, n, name: job.update(text=f"{i}/{n}: {name}")  # noqa: E731
     try:
         if kind == "prices":
-            errors, missing = scan.fetch_prices(
-                con, list_id, lambda i, n, name: job.update(text=f"Geizhals {i}/{n}: {name}"))
-            job["errors"] = errors + [f"Kein Treffer: {n}" for n in missing]
+            job["errors"], summary = scan.fetch_prices(con, list_id, progress)
         elif kind == "refresh":
-            job["text"] = "Lade BGG-Rangliste …"
-            scan.refresh_list(con, list_id)
+            job["errors"], summary = scan.refresh_list(con, list_id)
         else:
-            job["errors"] = scan.scan_offers(
-                con, list_id, lambda i, n, name: job.update(text=f"Kleinanzeigen {i}/{n}: {name}"))
-        job["text"] = "Fertig."
+            job["errors"], summary = scan.scan_offers(con, list_id, progress)
+        job["text"] = f"Fertig: {summary}"
+        job["failed"] = False
     except Exception as e:
-        job["text"] = f"Fehler: {e}"
+        job.update(text=f"Fehler: {e}", failed=True)
     finally:
         job["running"] = False
         con.close()
@@ -36,7 +34,7 @@ def _run(kind, list_id):
 
 def _start(kind, list_id):
     if not job["running"]:
-        job.update(running=True, text="Starte …", errors=[])
+        job.update(running=True, failed=False, text="Starte …", errors=[])
         threading.Thread(target=_run, args=(kind, list_id), daemon=True).start()
 
 
@@ -102,7 +100,8 @@ def bulk_prices():
 def lists_page():
     con = db.connect()
     if request.method == "POST":
-        db.add_list(con, request.form["name"], request.form["url"], int(request.form.get("size", 100)))
+        lid = db.add_list(con, request.form["name"], request.form.get("url", "").strip(), int(request.form.get("size", 100)))
+        db.add_manual_games(con, lid, request.form.get("manual", "").splitlines())
         return redirect(url_for("lists_page"))
     return render_template("lists.html", lists=con.execute("SELECT * FROM lists").fetchall(), presets=PRESETS)
 
@@ -112,3 +111,9 @@ def list_action(list_id, action):
     if action in ("refresh", "prices", "scan"):
         _start(action, list_id)
     return redirect(request.referrer or url_for("lists_page"))
+
+
+@app.route("/check")
+def check_page():
+    from . import check
+    return render_template("check.html", report=check.run())

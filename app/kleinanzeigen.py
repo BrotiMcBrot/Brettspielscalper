@@ -48,10 +48,10 @@ def parse_results(html):
 
 
 def find_offers(game_name, search_name=None):
-    """Angebote für ein Spiel. search_name (z.B. deutscher Titel) hat Vorrang vor dem BGG-Namen."""
+    """-> (passende Angebote, Anzahl roh gelesener Anzeigen). search_name (z.B. deutscher Titel) hat Vorrang."""
     name = search_name or game_name
     resp = http.get(search_url(name))
     if resp.status_code != 200:
         raise RuntimeError(f"Kleinanzeigen: HTTP {resp.status_code} für '{name}'")
-    return [o for o in parse_results(resp.text)
-            if o["price"] is not None and o["price"] >= MIN_PRICE and matches(name, o["title"])]
+    raw = parse_results(resp.text)
+    return [o for o in raw if o["price"] is not None and o["price"] >= MIN_PRICE and matches(name, o["title"])], len(raw)

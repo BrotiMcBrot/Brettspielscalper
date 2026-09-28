@@ -56,3 +56,10 @@ def test_geizhals_parse():
     res = geizhals.parse_results(GH_HTML)
     assert [r["price"] for r in res] == [49.99, 12.0]
     assert [r["name"] for r in res if matching.matches("Brass: Birmingham", r["name"])] == ["Brass: Birmingham"]
+
+
+def test_manual_games():
+    con = db.connect()
+    lid = db.add_list(con, "manuell", "")
+    db.add_manual_games(con, lid, ["Spiel A", "", "Spiel B"])
+    assert [(g["rank"], g["name"]) for g in db.games_of_list(con, lid)] == [(1, "Spiel A"), (2, "Spiel B")]
