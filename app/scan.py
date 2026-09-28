@@ -1,5 +1,6 @@
 """Ablauf: Rangliste laden, Angebote je Spiel suchen und speichern. Jede Funktion liefert (Meldungen, Zusammenfassung)."""
-from . import bgg, db, geizhals, kleinanzeigen
+from . import bgg, db, geizhals, kleinanzeigen, reference
+from .matching import base_name, contains, normalize, tokens
 from .http import Blocked
 
 ESTIMATE = "Kleinanzeigen-Schätzung"
@@ -22,18 +23,60 @@ def _games(con, list_id):
     return games
 
 
+def apply_reference_prices(con, list_id):
+    """Richtwerte für Spiele ohne Preis (oder mit bloßer Kleinanzeigen-Schätzung) eintragen. -> Anzahl"""
+    ref, n = reference.load(), 0
+    for g in db.games_of_list(con, list_id):
+        r = ref.get(normalize(g["name"]))
+        note = g["price_note"] or ""
+        if r and r["price"] and (not g["new_price"] or note.startswith(ESTIMATE)):
+            db.set_price(con, g["bgg_id"], r["price"], reference.NOTE)
+            n += 1
+    return n
+
+
+def search_plan(games):
+    """Pro Spiel: Suchnamen + Ausschlüsse. Enthält ein anderes Spiel der Liste den eigenen Namen
+    (Gloomhaven ⊂ Gloomhaven Pranken des Löwen, Pandemic Legacy Season 1/2 …), wird dessen Name ausgeschlossen."""
+    ref = reference.load()
+    plan = {}
+    for g in games:
+        r = ref.get(normalize(g["name"]), {})
+        own = [n.strip() for n in (g["search_name"] or "").split("|") if n.strip()] or r.get("aliases") or [base_name(g["name"])]
+        excl = [e.strip() for e in (g["exclude"] or "").split(",") if e.strip()] + r.get("exclude", [])
+        plan[g["bgg_id"]] = (own, excl)
+    for gid, (own, excl) in plan.items():
+        for other, (o_names, _) in plan.items():
+            if other == gid:
+                continue
+            for on in o_names:
+                ot = tokens(on)
+                if any(len(ot) > len(tokens(n)) and contains(ot, tokens(n)) for n in own):
+                    excl.append(on)
+    return plan
+
+
 def scan_offers(con, list_id, progress=None):
-    games, errors, raw_total, offers_total, with_offers, estimated = _games(con, list_id), [], 0, 0, 0, 0
+    games = _games(con, list_id)
+    ref_n = apply_reference_prices(con, list_id)
+    games = db.games_of_list(con, list_id)  # neu lesen (Preise können sich geändert haben)
+    plan = search_plan(games)
+    errors, raw_total, offers_total, with_offers, estimated = [], 0, 0, 0, 0
     for i, g in enumerate(games, 1):
         try:
-            offers, raw = kleinanzeigen.find_offers(g["name"], g["search_name"])
+            names, excl = plan[g["bgg_id"]]
+            offers, raw = kleinanzeigen.find_offers(names, excl)
             db.replace_offers(con, g["bgg_id"], offers)
-            # Neupreis aus NEU/OVP-Anzeigen schätzen – nur wenn keiner da ist oder der alte selbst geschätzt war
-            if not g["new_price"] or (g["price_note"] or "").startswith(ESTIMATE):
+            # Letzter Ausweg: Neupreis aus NEU/OVP-Anzeigen schätzen (nur ohne manuellen Preis / Richtwert)
+            note = g["price_note"] or ""
+            if not g["new_price"] or note.startswith(ESTIMATE):
                 est, n = kleinanzeigen.estimate_new_price(offers)
                 if est:
                     db.set_price(con, g["bgg_id"], est, f"{ESTIMATE} (Median aus {n} NEU/OVP-Anzeigen)")
                     estimated += 1
+                elif note.startswith(ESTIMATE):  # alte, evtl. falsche Schätzung nicht stehen lassen
+                    con.execute("UPDATE games SET new_price=NULL, price_note=NULL WHERE bgg_id=?", (g["bgg_id"],))
+                    con.commit()
             raw_total += raw
             offers_total += len(offers)
             with_offers += bool(offers)
@@ -46,7 +89,8 @@ def scan_offers(con, list_id, progress=None):
             progress(i, len(games), g["name"])
     if not raw_total and not errors:
         errors.insert(0, BLOCKED_HINT)
-    return errors, f"{len(games)} Spiele durchsucht, {raw_total} Anzeigen gelesen, {offers_total} passende Angebote für {with_offers} Spiele, {estimated} Neupreise aus NEU/OVP-Anzeigen geschätzt."
+    return errors, (f"{len(games)} Spiele durchsucht, {raw_total} Anzeigen gelesen, {offers_total} passende Angebote "
+                    f"für {with_offers} Spiele. Neupreise: {ref_n} Richtwerte, {estimated} aus NEU/OVP-Anzeigen geschätzt.")
 
 
 def fetch_prices(con, list_id, progress=None, overwrite=False):

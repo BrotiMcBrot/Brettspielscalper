@@ -2,10 +2,23 @@
 import re
 import unicodedata
 
-STOPWORDS = {"the", "a", "an", "der", "die", "das", "und", "and", "of", "von", "fur", "for", "spiel", "game"}
-# Anzeigen mit diesen Wörtern sind meist keine Grundspiele / keine Verkaufsangebote
-REJECT = {"erweiterung", "expansion", "suche", "gesucht", "gesuch", "sleeves", "insert", "organizer",
-          "ersatzteile", "ersatzteil", "promo", "tausche", "tausch", "mieten", "leihen", "defekt", "puzzle"}
+STOPWORDS = {"the", "a", "an", "of", "and", "der", "die", "das", "des", "dem", "den", "ein", "eine", "einer",
+             "und", "von", "vom", "im", "zu", "fur", "for", "spiel", "game"}
+# Anzeigen mit diesen Wörtern sind meist kein Grundspiel (Zubehör, Merch, Bücher, Gesuche …)
+REJECT = {
+    "erweiterung", "erweiterungen", "expansion", "promo", "promos", "mini",
+    "suche", "gesucht", "gesuch", "tausche", "tausch", "mieten", "leihen", "defekt",
+    "sleeves", "insert", "inlay", "organizer", "tray", "trays", "zubehor", "upgrade", "3d", "clays",
+    "matte", "spielmatte", "playmat", "neopren", "token", "tokens", "kartenhalter", "dashboard", "dashboards",
+    "figur", "figuren", "spielfiguren", "miniatur", "miniaturen", "ersatzteil", "ersatzteile", "teile",
+    "karton", "leer", "leerer", "booster", "pack", "map", "scenarios", "szenarien", "artbook", "art", "fan",
+    "konvolut", "sammlung", "spielesammlung", "junior", "kids", "duo",
+    "lego", "playmobil", "puzzle", "puzzel", "dvd", "bluray", "blu", "cd", "lp", "vinyl", "buch", "roman",
+    "manga", "hardcover", "taschenbuch", "poster", "shirt", "tshirt", "trikot", "jacke", "weste", "pullover",
+    "hoodie", "cap", "pin", "anstecknadel", "sticker", "aufkleber", "cpu", "kuhler",
+}
+EDITION = re.compile(r"\b(?:(?:second|2nd|third|3rd|fourth|4th|essential|revised|big box)\s+)?edition\b"
+                     r"|\b(?:the\s+)?(?:board|card)\s+game\b", re.I)
 
 
 def normalize(text):
@@ -19,13 +32,27 @@ def tokens(text):
     return [t for t in normalize(text).split() if t not in STOPWORDS]
 
 
-def matches(game_name, title):
-    """Alle Namens-Tokens müssen im Titel vorkommen; Ausschlusswörter dürfen nicht im Titel stehen,
-    außer sie sind Teil des Spielnamens."""
-    want = tokens(game_name)
-    if not want:
+def base_name(name):
+    """Suchbarer Kurzname: Editions-Zusätze weg, lange Untertitel weg ('Through the Ages: A New Story …')."""
+    n = EDITION.sub("", name).strip(" :–-")
+    if ":" in n:
+        pre, suf = n.split(":", 1)
+        if len(tokens(suf)) >= 3 and len(normalize(pre)) >= 5:
+            n = pre
+    return n.strip(" :–-")
+
+
+def contains(seq, sub):
+    """sub kommt als zusammenhängende Wortfolge in seq vor."""
+    return bool(sub) and any(seq[i:i + len(sub)] == sub for i in range(len(seq) - len(sub) + 1))
+
+
+def matches(name, title, exclude=()):
+    """Der Spielname muss als zusammenhängende Wortfolge im Titel stehen ('Star Wars Rebellion' passt nicht zu
+    'Star Wars Rebels … Rebellion'); Ausschlusswörter (global + pro Spiel) dürfen nicht vorkommen."""
+    want, have = tokens(name), tokens(title)
+    if not contains(have, want):
         return False
-    have = set(tokens(title))
-    if not all(t in have for t in want):
+    if (set(have) & REJECT) - set(want):
         return False
-    return not ((have & REJECT) - set(want))
+    return not any(contains(have, tokens(e)) for e in exclude)

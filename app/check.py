@@ -27,6 +27,9 @@ def _probe(label, url, parser):
     lines += [f"   HTTP {r.status_code}, {len(r.text)} Zeichen, Titel: {title.group(1).strip()[:80] if title else '-'}",
               f"   gelesene Einträge: {len(items)}"]
     lines += [f"     - {i}" for i in items[:3]]
+    if items and "category" in items[0]:
+        from collections import Counter
+        lines.append(f"   Kategorien der Anzeigen: {dict(Counter(i['category'] for i in items))}")
     if BLOCK_WORDS.search(r.text[:20000]) and not items:
         lines.append("   Hinweis: Seite enthält Captcha-/Consent-/Bot-Schutz-Wörter.")
     if label == "kleinanzeigen":
@@ -41,5 +44,5 @@ def _probe(label, url, parser):
 def run():
     out = _probe("bgg", "https://boardgamegeek.com/browse/boardgame", bgg.parse_ranking)
     out += _probe("geizhals", geizhals.search_url(SAMPLE), geizhals.parse_results)
-    out += _probe("kleinanzeigen", kleinanzeigen.search_url(SAMPLE), kleinanzeigen.parse_results)
+    out += _probe("kleinanzeigen", kleinanzeigen.search_url(SAMPLE, kleinanzeigen.GAMES_CATEGORY), kleinanzeigen.parse_results)
     return "\n".join(out)

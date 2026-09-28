@@ -48,6 +48,9 @@ def connect():
     con.row_factory = sqlite3.Row
     con.execute("PRAGMA foreign_keys = ON")
     con.executescript(SCHEMA)
+    cols = {r[1] for r in con.execute("PRAGMA table_info(games)")}
+    if "exclude" not in cols:  # Migration älterer Datenbanken
+        con.execute("ALTER TABLE games ADD COLUMN exclude TEXT")
     return con
 
 
@@ -99,14 +102,14 @@ def replace_offers(con, bgg_id, offers):
     con.commit()
 
 
-def deals(con, list_id, max_ratio):
-    """Angebote mit Preis <= max_ratio * Neupreis (nur Spiele mit bekanntem Neupreis)."""
+def deals(con, list_id, max_ratio, min_ratio=0.0):
+    """Angebote mit min_ratio * Neupreis <= Preis <= max_ratio * Neupreis (nur Spiele mit bekanntem Neupreis)."""
     return con.execute(
         """SELECT o.*, g.name AS game, g.new_price, li.rank, o.price / g.new_price AS ratio
            FROM offers o JOIN games g USING(bgg_id) JOIN list_items li USING(bgg_id)
-           WHERE li.list_id=? AND g.new_price > 0 AND o.price <= ? * g.new_price
+           WHERE li.list_id=? AND g.new_price > 0 AND o.price <= ? * g.new_price AND o.price >= ? * g.new_price
            ORDER BY ratio""",
-        (list_id, max_ratio),
+        (list_id, max_ratio, min_ratio),
     ).fetchall()
 
 

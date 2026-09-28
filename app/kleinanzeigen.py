@@ -5,14 +5,25 @@ from urllib.parse import quote_plus, urljoin
 from bs4 import BeautifulSoup
 
 from . import http
-from .matching import matches
+from .matching import matches, normalize, tokens
 
 BASE = "https://www.kleinanzeigen.de"
 MIN_PRICE = 3.0  # darunter meist Platzhalter / Zubehör
 
 
-def search_url(query):
+GAMES_CATEGORY = "23"   # Kleinanzeigen-Kategorie der Brettspiel-Anzeigen (steht in jeder Anzeigen-URL: …/<id>-23-<ort>)
+
+
+def search_url(query, category=None):
+    if category:
+        slug = "-".join(normalize(query).split())
+        return f"{BASE}/s-{slug}/k0c{category}"
     return f"{BASE}/s-suchanfrage.html?keywords={quote_plus(query)}"
+
+
+def ad_category(url):
+    m = re.search(r"/\d+-(\d+)-\d+/?$", url)
+    return m.group(1) if m else None
 
 
 def parse_price(text):
@@ -69,18 +80,34 @@ def parse_results(html):
             "negotiable": vb,
             "location": loc.get_text(" ", strip=True) if loc else "",
             "url": urljoin(BASE, href),
+            "category": ad_category(href),
         })
     return out
 
 
-def find_offers(game_name, search_name=None):
-    """-> (passende Angebote, Anzahl roh gelesener Anzeigen). search_name (z.B. deutscher Titel) hat Vorrang."""
-    name = search_name or game_name
-    resp = http.get(search_url(name))
-    if resp.status_code != 200:
-        raise RuntimeError(f"Kleinanzeigen: HTTP {resp.status_code} für '{name}'")
-    raw = parse_results(resp.text)
-    return [o for o in raw if o["price"] is not None and o["price"] >= MIN_PRICE and matches(name, o["title"])], len(raw)
+def _search(query):
+    """Erst in der Spiele-Kategorie suchen; liefert die nichts (z.B. anderes URL-Schema), allgemein suchen."""
+    resp = http.get(search_url(query, GAMES_CATEGORY))
+    raw = parse_results(resp.text) if resp.status_code == 200 else []
+    if not raw:
+        resp = http.get(search_url(query))
+        if resp.status_code != 200:
+            raise RuntimeError(f"Kleinanzeigen: HTTP {resp.status_code} für '{query}'")
+        raw = parse_results(resp.text)
+    return raw
+
+
+def find_offers(names, exclude=()):
+    """names: Suchnamen (z.B. deutscher + englischer Titel). -> (passende Angebote, Anzahl roh gelesener Anzeigen)"""
+    found, raw_n = {}, 0
+    for name in names:
+        raw = _search(name)
+        raw_n += len(raw)
+        for o in raw:
+            if (o["price"] is not None and o["price"] >= MIN_PRICE
+                    and o["category"] in (None, GAMES_CATEGORY) and matches(name, o["title"], exclude)):
+                found[o["ad_id"]] = o
+    return list(found.values()), raw_n
 
 
 NEW_WORDS = {"neu", "ovp", "eingeschweisst", "eingeschweist", "sealed", "ungespielt", "originalverpackt", "new"}
@@ -90,10 +117,14 @@ USED_WORDS = {"gebraucht", "gespielt", "bespielt"}
 def estimate_new_price(offers):
     """Neupreis-Schätzung: Median der Angebote, die sich als neu/OVP/ungespielt ausweisen (mind. 2 nötig)."""
     from statistics import median
-    from .matching import tokens
     prices = []
     for o in offers:
         t = set(tokens(o["title"]))
         if t & NEW_WORDS and not t & USED_WORDS:
             prices.append(o["price"])
-    return (round(median(prices), 2), len(prices)) if len(prices) >= 2 else (None, len(prices))
+    if len(prices) < 3:
+        return None, len(prices)
+    # Ausreißer (Sammlungen, Tippfehler) raus: nicht mehr als das 2,5-fache des Medians aller Angebote
+    cap = 2.5 * median(o["price"] for o in offers)
+    prices = [p for p in prices if p <= cap]
+    return (round(median(prices), 2), len(prices)) if len(prices) >= 3 else (None, len(prices))

@@ -51,7 +51,8 @@ Alles passiert in der Weboberfläche mit den drei Reitern **Schnäppchen**, **Ne
    Manuell eingetragene Preise werden nie überschrieben; Quelle steht im Reiter *Neupreise*.
    Weiter: – sucht zu jedem Spiel Angebote. Das dauert bei 100 Spielen
    mehrere Minuten (bewusst 1,5 s Pause pro Anfrage). Fortschritt: Seite neu laden.
-6. **Reiter *Schnäppchen*:** Liste wählen, Prozentgrenze einstellen, „Zeigen“. Angezeigt werden nur
+6. **Reiter *Schnäppchen*:** Liste wählen, „mindestens X % günstiger als neu“ einstellen (Standard 50 %), „Zeigen“.
+   Die Untergrenze („nicht unter 10 % vom Neupreis“) blendet Spottpreise aus, die fast immer Zubehör oder Fehltreffer sind. Angezeigt werden nur
    Angebote von Spielen mit bekanntem Neupreis. Ein Klick auf den Titel öffnet die Anzeige.
 
 Neupreise musst du nur beim ersten Mal holen; danach reicht es, Schritt 5 zu wiederholen, um neue Angebote zu sehen.
@@ -65,6 +66,18 @@ Liste einfügen. Spiele, die in mehreren Listen vorkommen, teilen sich Neupreis 
     python -m app refresh <listen-id>   # BGG laden
     python -m app prices  <listen-id>   # Neupreise von Geizhals
     python -m app scan    <listen-id>   # Kleinanzeigen scannen
+
+### Woher kommen die Neupreise? (Reihenfolge)
+1. **Manuell** im Reiter *Neupreise* eingetragen – wird nie überschrieben.
+2. **Richtwert** aus `app/reference.csv` (ca. UVP für ~130 bekannte Spiele, grob geschätzt – bitte prüfen).
+3. **Kleinanzeigen-Schätzung**: Median von mind. 3 Anzeigen mit „NEU/OVP/ungespielt“ (Ausreißer entfernt).
+
+### Wie werden falsche Treffer vermieden?
+- Suche nur in der Kleinanzeigen-Kategorie für Spiele (Bücher, Kleidung, Autoteile … fallen raus).
+- Der Spielname muss als zusammenhängende Wortfolge im Titel stehen.
+- Globale Ausschlusswörter (Lego, Manga, Erweiterung, Sleeves, 3D-Druck, Figuren …) in `app/matching.py`.
+- Pro Spiel: deutsche Suchnamen und eigene Ausschlusswörter im Reiter *Neupreise* (Vorgaben in `app/reference.csv`).
+- Enthält ein anderes Spiel der Liste den Namen (Gloomhaven → „Gloomhaven: Pranken des Löwen“), wird es ausgeschlossen.
 
 ## 4. Probleme? Zuerst die Diagnose
 

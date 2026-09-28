@@ -48,9 +48,10 @@ def _current(con):
 def deals():
     con = db.connect()
     lists, lid = _current(con)
-    percent = request.args.get("percent", 50, type=int)
-    rows = db.deals(con, lid, percent / 100) if lid else []
-    return render_template("deals.html", lists=lists, lid=lid, percent=percent, rows=rows)
+    discount = request.args.get("discount", 50, type=int)   # mindestens so viel % günstiger als neu
+    floor = request.args.get("floor", 10, type=int)          # unter X % vom Neupreis ist es fast immer Zubehör/Fehltreffer
+    rows = db.deals(con, lid, 1 - discount / 100, floor / 100) if lid else []
+    return render_template("deals.html", lists=lists, lid=lid, discount=discount, floor=floor, rows=rows)
 
 
 @app.route("/prices")
@@ -69,8 +70,9 @@ def save_prices():
         if key.startswith("price_"):
             gid = int(key[6:])
             val = val.replace(",", ".").strip()
-            con.execute("UPDATE games SET search_name=? WHERE bgg_id=?",
-                        (request.form.get(f"alias_{gid}", "").strip() or None, gid))
+            con.execute("UPDATE games SET search_name=?, exclude=? WHERE bgg_id=?",
+                        (request.form.get(f"alias_{gid}", "").strip() or None,
+                         request.form.get(f"excl_{gid}", "").strip() or None, gid))
             if val:
                 old = con.execute("SELECT new_price FROM games WHERE bgg_id=?", (gid,)).fetchone()[0]
                 if old is None or abs(old - float(val)) > 0.001:  # nur echte Änderungen gelten als manuell
@@ -113,7 +115,8 @@ def lists_page():
                 return redirect(url_for("lists_page"))
             lid = db.add_list(con, request.form["name"], f"csv:{col}", size)
             db.save_ranking(con, lid, items)
-            job.update(text=f"{len(items)} Spiele aus der CSV importiert.", failed=False, errors=[])
+            n = scan.apply_reference_prices(con, lid)
+            job.update(text=f"{len(items)} Spiele aus der CSV importiert, {n} Richtwert-Neupreise eingetragen.", failed=False, errors=[])
             return redirect(url_for("lists_page"))
         lid = db.add_list(con, request.form["name"], request.form.get("url", "").strip(), int(request.form.get("size", 100)))
         db.add_manual_games(con, lid, request.form.get("manual", "").splitlines())

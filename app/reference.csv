@@ -1,0 +1,135 @@
+# name = BGG-Name (englisch); aliases = Suchnamen für Kleinanzeigen, mit | getrennt; price = ca. UVP in EUR; exclude = Ausschlusswörter, mit | getrennt
+name;aliases;price;exclude
+Brass: Birmingham;Brass Birmingham;60;
+Brass: Lancashire;Brass Lancashire;60;
+Pandemic Legacy: Season 1;Pandemic Legacy Season 1;50;
+Pandemic Legacy: Season 2;Pandemic Legacy Season 2;50;
+Pandemic Legacy: Season 0;Pandemic Legacy Season 0;50;
+Ark Nova;Arche Nova|Ark Nova;55;
+Gloomhaven;Gloomhaven;140;pranken|jaws|frosthaven|buttons|knopfe|krabbler
+Gloomhaven: Jaws of the Lion;Gloomhaven Pranken des Löwen|Jaws of the Lion;45;
+Frosthaven;Frosthaven;230;
+Twilight Imperium: Fourth Edition;Twilight Imperium;150;prophecy of kings
+Dune: Imperium;Dune Imperium;50;uprising|bloodlines|ix|immortality
+Dune: Imperium – Uprising;Dune Imperium Uprising;55;
+Terraforming Mars;Terraforming Mars;50;ares|expedition|prelude|venus|turmoil|kolonien|hellas
+Terraforming Mars: Ares Expedition;Ares Expedition;40;
+War of the Ring: Second Edition;Der Ringkrieg|War of the Ring;70;
+Star Wars: Rebellion;Star Wars Rebellion;90;
+Spirit Island;Spirit Island;70;ast|tatze|zerklüftete|jagged
+Gaia Project;Gaia Project;70;
+Twilight Struggle;Twilight Struggle;50;
+Through the Ages: A New Story of Civilization;Through the Ages;60;
+Great Western Trail;Great Western Trail;55;
+Great Western Trail: Second Edition;Great Western Trail;55;
+Scythe;Scythe;80;
+Eclipse: Second Dawn for the Galaxy;Eclipse;150;
+7 Wonders Duel;7 Wonders Duel;25;
+7 Wonders;7 Wonders;45;duel
+The Castles of Burgundy;Burgen von Burgund|Castles of Burgundy;40;
+Concordia;Concordia;50;
+Terra Mystica;Terra Mystica;65;
+A Feast for Odin;Ein Fest für Odin|Feast for Odin;80;
+Wingspan;Flügelschlag|Wingspan;50;
+Everdell;Everdell;60;
+Root;Root;60;
+Lost Ruins of Arnak;Ruinen von Arnak|Lost Ruins of Arnak;50;
+Barrage;Barrage;90;
+Orléans;Orléans;55;
+Agricola;Agricola;60;
+Caverna: The Cave Farmers;Caverna;80;
+Puerto Rico;Puerto Rico;40;
+Mage Knight Board Game;Mage Knight;80;
+Nemesis;Nemesis;150;
+Blood Rage;Blood Rage;80;
+Kingdom Death: Monster;Kingdom Death Monster;400;
+Too Many Bones;Too Many Bones;130;
+Viticulture Essential Edition;Viticulture;55;
+Tzolk'in: The Mayan Calendar;Tzolkin;55;
+Mansions of Madness: Second Edition;Villen des Wahnsinns|Mansions of Madness;100;
+Food Chain Magnate;Food Chain Magnate;90;
+Android: Netrunner;Android Netrunner;40;
+Heat: Pedal to the Metal;Heat Pedal to the Metal;55;
+Cascadia;Cascadia;35;
+The Crew: The Quest for Planet Nine;Die Crew Reist gemeinsam|Die Crew Planet Neun;15;tiefsee|deep sea
+The Crew: Mission Deep Sea;Die Crew Mission Tiefsee|Die Crew Tiefsee;15;
+Sky Team;Sky Team;30;
+Marvel Champions: The Card Game;Marvel Champions;60;
+Arkham Horror: The Card Game;Arkham Horror Kartenspiel|Arkham Horror LCG;50;
+Star Wars: Imperial Assault;Star Wars Imperial Assault;100;
+Race for the Galaxy;Race for the Galaxy;30;
+Codenames;Codenames;20;
+Azul;Azul;35;
+Hegemony: Lead Your Class to Victory;Hegemony;110;
+Oathsworn: Into the Deepwood;Oathsworn;200;
+Darwin's Journey;Darwins Journey;70;
+Lisboa;Lisboa;90;
+On Mars;On Mars;110;magic maze|life on mars
+Maracaibo;Maracaibo;60;
+Beyond the Sun;Beyond the Sun;60;
+The Quacks of Quedlinburg;Quacksalber von Quedlinburg;40;
+Power Grid;Funkenschlag;45;
+Paladins of the West Kingdom;Paladine des Westfrankenreichs;50;
+Architects of the West Kingdom;Architekten des Westfrankenreichs;40;
+Underwater Cities;Underwater Cities;65;
+Le Havre;Le Havre;60;
+Anachrony;Anachrony;90;
+Revive;Revive;60;
+Bomb Busters;Bomb Busters;20;
+Pax Pamir: Second Edition;Pax Pamir;60;
+Mechs vs. Minions;Mechs vs Minions;90;
+Crokinole;Crokinole;150;
+Kanban EV;Kanban EV;80;
+Grand Austria Hotel;Grand Austria Hotel;50;
+Obsession;Obsession;70;
+Sleeping Gods;Sleeping Gods;90;
+Voidfall;Voidfall;110;
+Earth;Earth;50;
+The Castles of Mad King Ludwig;Schlösser des König Ludwig|Castles of Mad King Ludwig;45;
+Five Tribes;Five Tribes;45;
+Istanbul;Istanbul;40;
+Trickerion: Legends of Illusion;Trickerion;70;
+Kemet: Blood and Sand;Kemet;100;
+Cthulhu: Death May Die;Cthulhu Death May Die;100;
+The 7th Continent;7th Continent;90;
+Undaunted: Normandy;Undaunted Normandy;40;
+Aeon's End;Aeons End;45;
+Dominion;Dominion;40;
+Patchwork;Patchwork;20;
+Tigris & Euphrates;Euphrat & Tigris|Tigris & Euphrates;45;
+El Grande;El Grande;50;
+Robinson Crusoe: Adventures on the Cursed Island;Robinson Crusoe;60;
+Eldritch Horror;Eldritch Horror;60;
+Clank!: A Deck-Building Adventure;Clank;45;legacy|space|catacombs|katakomben
+Clank! Legacy: Acquisitions Incorporated;Clank Legacy;80;
+Boonlake;Boonlake;60;
+Hansa Teutonica;Hansa Teutonica;45;
+Inis;Inis;70;
+Age of Innovation;Age of Innovation;80;
+Harmonies;Harmonies;35;
+SETI: Search for Extraterrestrial Intelligence;SETI;70;
+Arcs;Arcs;70;
+Nucleum;Nucleum;80;
+Ra;Ra Knizia;40;
+Carcassonne;Carcassonne;35;
+Twilight Imperium: Third Edition;Twilight Imperium;120;
+Arkwright;Arkwright;70;
+Great Western Trail: New Zealand;Great Western Trail Neuseeland;55;
+Spirit Island: Jagged Earth;Spirit Island Zerklüftete Erde;60;
+Cyclades;Cyclades;60;
+Lorenzo il Magnifico;Lorenzo il Magnifico|Lorenzo der Prächtige;50;
+Mombasa;Mombasa;55;
+Trajan;Trajan;45;
+Troyes;Troyes;45;
+Tapestry;Tapestry;90;
+Keyflower;Keyflower;45;
+The Gallerist;The Gallerist;80;
+Lords of Waterdeep;Lords of Waterdeep;45;
+Blood on the Clocktower;Blood on the Clocktower;90;
+Mysterium;Mysterium;40;
+Decrypto;Decrypto;20;
+Just One;Just One;20;
+The Mind;The Mind Kartenspiel;10;
+Railroad Ink;Railroad Ink;20;
+Splendor;Splendor;30;duel
+Splendor Duel;Splendor Duel;25;

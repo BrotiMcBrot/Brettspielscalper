@@ -1,9 +1,13 @@
 {% extends "base.html" %}{% block h %}Schnäppchen{% endblock %}{% block body %}
 {% if not lists %}<p>Lege zuerst unter <a href="{{ url_for('lists_page') }}">Listen</a> eine Rangliste an.</p>{% else %}
 <form>Liste <select name="list">{% for l in lists %}<option value="{{ l.id }}" {{ 'selected' if l.id==lid }}>{{ l.name }}</option>{% endfor %}</select>
- Angebot höchstens <input type="number" name="percent" value="{{ percent }}" min="1" max="100"> % vom Neupreis <button>Zeigen</button></form>
-<table><tr><th>#</th><th>Spiel</th><th>Angebot</th><th>Preis</th><th>Neupreis</th><th>%</th><th>Ort</th></tr>
+ mindestens <input type="number" name="discount" value="{{ discount }}" min="0" max="99"> % günstiger als neu,
+ aber nicht unter <input type="number" name="floor" value="{{ floor }}" min="0" max="99"> % vom Neupreis
+ <button>Zeigen</button></form>
+<p class="muted">Die Untergrenze blendet Spottpreise aus – das sind fast immer Zubehör, Einzelteile oder falsche Treffer. Auf 0 setzen, um alles zu sehen.</p>
+<table><tr><th>#</th><th>Spiel</th><th>Angebot</th><th>Preis</th><th>Neupreis</th><th>Ersparnis</th><th>Ort</th></tr>
 {% for r in rows %}<tr><td>{{ r.rank }}</td><td>{{ r.game }}</td><td><a href="{{ r.url }}" target="_blank" rel="noopener">{{ r.title }}</a></td>
-<td class="good">{{ '%.0f'|format(r.price) }} €{{ ' VB' if r.negotiable }}</td><td>{{ '%.0f'|format(r.new_price) }} €</td><td>{{ '%.0f'|format(r.ratio*100) }}</td><td class="muted">{{ r.location }}</td></tr>
+<td>{{ '%.0f'|format(r.price) }} €{{ ' VB' if r.negotiable }}</td><td>{{ '%.0f'|format(r.new_price) }} €</td>
+<td class="good">−{{ '%.0f'|format((1 - r.ratio)*100) }} % ({{ '%.0f'|format(r.new_price - r.price) }} €)</td><td class="muted">{{ r.location }}</td></tr>
 {% else %}<tr><td colspan="7" class="muted">Keine Treffer. Sind Neupreise eingetragen und wurde gescannt?</td></tr>{% endfor %}</table>{% endif %}
 {% endblock %}
