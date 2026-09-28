@@ -2,6 +2,8 @@
 import os
 import re
 
+from bs4 import BeautifulSoup
+
 from . import bgg, geizhals, http, kleinanzeigen
 
 DEBUG_DIR = os.path.join(os.path.dirname(__file__), "..", "data", "debug")
@@ -13,6 +15,8 @@ def _probe(label, url, parser):
     lines = [f"== {label}: {url}"]
     try:
         r = http.get(url)
+    except http.Blocked as e:
+        return lines + [f"   BLOCKIERT: {e}"]
     except Exception as e:
         return lines + [f"   FEHLER beim Verbinden: {e}"]
     os.makedirs(DEBUG_DIR, exist_ok=True)
@@ -25,6 +29,11 @@ def _probe(label, url, parser):
     lines += [f"     - {i}" for i in items[:3]]
     if BLOCK_WORDS.search(r.text[:20000]) and not items:
         lines.append("   Hinweis: Seite enthält Captcha-/Consent-/Bot-Schutz-Wörter.")
+    if label == "kleinanzeigen":
+        art = BeautifulSoup(r.text, "html.parser").select_one("article[data-adid]")
+        if art is not None:
+            lines.append("   Erste Anzeige (Rohdaten, bitte bei Problemen mitschicken):")
+            lines.append("   " + re.sub(r"\s+", " ", str(art))[:1500])
     lines.append(f"   Roh-HTML gespeichert: {path}")
     return lines
 

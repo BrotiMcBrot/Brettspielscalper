@@ -11,12 +11,19 @@ _session.headers.update({
 _last = {}
 
 
+class Blocked(RuntimeError):
+    """Die Seite verweigert automatische Abfragen (Cloudflare/Bot-Schutz). Wird nicht umgangen."""
+
+
 def get(url, delay=1.5, **kw):
     host = requests.utils.urlparse(url).netloc
     wait = _last.get(host, 0) + delay - time.time()
     if wait > 0:
         time.sleep(wait)
     try:
-        return _session.get(url, timeout=25, **kw)
+        r = _session.get(url, timeout=25, **kw)
     finally:
         _last[host] = time.time()
+    if r.status_code in (403, 429, 503):
+        raise Blocked(f"{host} blockiert automatische Abfragen (HTTP {r.status_code}, Bot-Schutz).")
+    return r

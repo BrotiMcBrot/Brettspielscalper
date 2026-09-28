@@ -26,11 +26,17 @@ Beim nächsten Mal reicht: Ordner öffnen, `source .venv/bin/activate`, `python 
 
 Alles passiert in der Weboberfläche mit den drei Reitern **Schnäppchen**, **Neupreise**, **Listen**.
 
-1. **Liste anlegen** (Reiter *Listen* → „Neue Liste“)
-   - Name: z. B. `Top 100 Brettspiele`
-   - URL: `https://boardgamegeek.com/browse/boardgame` (steht als Vorschlag im Feld), Anzahl: `100`
-2. **„1. BGG laden“** klicken – holt die Ränge und Spielnamen von BoardGameGeek.
-3. **„2. Neupreise (Geizhals)“** klicken – sucht jedes Spiel auf Geizhals und speichert den günstigsten
+1. **Liste anlegen** (Reiter *Listen* → „Neue Liste“). BGG und Geizhals blockieren automatische Abfragen
+   per Cloudflare (HTTP 403) – das umgeht die App nicht. Deshalb der empfohlene Weg für BGG:
+   - Auf https://boardgamegeek.com/data_dumps/bg_ranks (Login nötig) die ZIP herunterladen und entpacken
+     → `boardgames_ranks.csv`.
+   - Bei „Neue Liste“ Name eintragen, die CSV hochladen und die gewünschte Rangliste wählen
+     (Gesamt, Strategie-, Familien-, Thematic-, Party-, Kriegsspiele …), Anzahl `100`, „Anlegen“.
+     Die Spiele sind sofort drin; „1. BGG laden“ ist dann nicht nötig.
+   - Alternativ: Spielnamen manuell eintragen (einer pro Zeile), oder – nur falls BGG bei dir doch antwortet –
+     eine BGG-URL wie `https://boardgamegeek.com/browse/boardgame` und „1. BGG laden“.
+3. **„2. Neupreise (Geizhals)“** klicken (bricht bei Cloudflare-Sperre sofort mit Hinweis ab – dann Preise
+   im Reiter *Neupreise* von Hand eintragen bzw. per `Name;Preis`-Import einfügen) – sucht jedes Spiel auf Geizhals und speichert den günstigsten
    aktuellen Neupreis. Bereits eingetragene (auch manuelle) Preise werden nicht überschrieben.
    Spiele ohne Treffer werden oben als Hinweis aufgelistet.
 4. **Reiter *Neupreise*:** Fehlende Preise nachtragen oder falsche korrigieren. Spiele ohne Preis stehen oben.

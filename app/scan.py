@@ -1,5 +1,6 @@
 """Ablauf: Rangliste laden, Angebote je Spiel suchen und speichern. Jede Funktion liefert (Meldungen, Zusammenfassung)."""
 from . import bgg, db, geizhals, kleinanzeigen
+from .http import Blocked
 
 BLOCKED_HINT = "Nichts von der Seite lesbar (Bot-Schutz oder geändertes Layout?) – bitte `python -m app check` ausführen."
 
@@ -29,11 +30,14 @@ def scan_offers(con, list_id, progress=None):
             raw_total += raw
             offers_total += len(offers)
             with_offers += bool(offers)
+        except Blocked as e:
+            errors.insert(0, f"{e} Abbruch. Später erneut versuchen.")
+            break
         except Exception as e:  # ein Fehler soll den Gesamtlauf nicht abbrechen
             errors.append(f"{g['name']}: {e}")
         if progress:
             progress(i, len(games), g["name"])
-    if not raw_total:
+    if not raw_total and not errors:
         errors.insert(0, BLOCKED_HINT)
     return errors, f"{len(games)} Spiele durchsucht, {raw_total} Anzeigen gelesen, {offers_total} passende Angebote für {with_offers} Spiele."
 
@@ -53,10 +57,13 @@ def fetch_prices(con, list_id, progress=None, overwrite=False):
                 found_n += 1
             else:
                 errors.append(f"Kein Treffer: {g['name']} ({raw} Produkte gelesen)")
+        except Blocked as e:
+            errors.insert(0, f"{e} Abbruch – trage Neupreise auf der Seite „Neupreise“ manuell ein (oder Import Name;Preis).")
+            break
         except Exception as e:
             errors.append(f"{g['name']}: {e}")
         if progress:
             progress(i, len(games), g["name"])
-    if not raw_total and skipped < len(games):
+    if not raw_total and not errors and skipped < len(games):
         errors.insert(0, BLOCKED_HINT)
     return errors, f"{found_n} Neupreise gefunden, {skipped} schon vorhanden, {len(games) - skipped - found_n} ohne Preis."

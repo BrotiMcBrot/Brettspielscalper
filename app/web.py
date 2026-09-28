@@ -2,7 +2,7 @@ import threading
 
 from flask import Flask, redirect, render_template, request, url_for
 
-from . import db, scan
+from . import bgg, db, scan
 from .matching import normalize
 
 app = Flask(__name__)
@@ -100,10 +100,23 @@ def bulk_prices():
 def lists_page():
     con = db.connect()
     if request.method == "POST":
+        csv_file = request.files.get("csv")
+        if csv_file and csv_file.filename:
+            col = request.form.get("column", "rank")
+            size = int(request.form.get("size", 100))
+            try:
+                items = bgg.parse_csv(csv_file.read().decode("utf-8", "replace"), col, size)
+            except ValueError as e:
+                job.update(text=f"Fehler: {e}", failed=True, errors=[])
+                return redirect(url_for("lists_page"))
+            lid = db.add_list(con, request.form["name"], f"csv:{col}", size)
+            db.save_ranking(con, lid, items)
+            job.update(text=f"{len(items)} Spiele aus der CSV importiert.", failed=False, errors=[])
+            return redirect(url_for("lists_page"))
         lid = db.add_list(con, request.form["name"], request.form.get("url", "").strip(), int(request.form.get("size", 100)))
         db.add_manual_games(con, lid, request.form.get("manual", "").splitlines())
         return redirect(url_for("lists_page"))
-    return render_template("lists.html", lists=con.execute("SELECT * FROM lists").fetchall(), presets=PRESETS)
+    return render_template("lists.html", lists=con.execute("SELECT * FROM lists").fetchall(), presets=PRESETS, columns=bgg.RANK_COLUMNS)
 
 
 @app.post("/lists/<int:list_id>/<action>")

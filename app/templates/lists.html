@@ -5,10 +5,14 @@
 <form method="post" action="{{ url_for('list_action', list_id=l.id, action='prices') }}" style="display:inline"><button>2. Neupreise (Geizhals)</button></form>
 <form method="post" action="{{ url_for('list_action', list_id=l.id, action='scan') }}" style="display:inline"><button>3. Kleinanzeigen scannen</button></form></td></tr>{% endfor %}</table>
 <h3>Neue Liste</h3>
-<form method="post"><p><input type="text" name="name" placeholder="z.B. Top 100 Kampagnenspiele" required></p>
+<form method="post" enctype="multipart/form-data"><p><input type="text" name="name" placeholder="z.B. Top 100 Kampagnenspiele" required></p>
 <p><input type="text" name="url" placeholder="BGG-Browse-/Such-URL (sortiert nach Rang) – oder leer lassen und unten Namen eintragen" list="presets">
 <datalist id="presets">{% for n,u in presets.items() %}<option value="{{ u }}">{{ n }}</option>{% endfor %}</datalist></p>
 <p><textarea name="manual" rows="4" style="width:100%" placeholder="Alternativ Spielnamen manuell, einer pro Zeile (falls BGG nicht klappt)"></textarea></p>
+<p><b>Empfohlen (BGG blockiert Skripte):</b> BGG-Rangliste als CSV hochladen
+(<a href="https://boardgamegeek.com/data_dumps/bg_ranks" target="_blank" rel="noopener">Download nach Login</a>, ZIP entpacken → <code>boardgames_ranks.csv</code>):<br>
+<input type="file" name="csv" accept=".csv"> Rangliste
+<select name="column">{% for k,v in columns.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}</select></p>
 <p>Anzahl <input type="number" name="size" value="100"> <button>Anlegen</button></p></form>
 <p class="muted">Tipp: Für Kategorien wie „Kampagnenspiele“ oder „Familienspiele“ auf BGG die gewünschte Suche/Browse-Ansicht nach Rang sortieren und die Adresse hier einfügen.</p>
 {% endblock %}

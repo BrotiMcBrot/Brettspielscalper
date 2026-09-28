@@ -5,6 +5,8 @@ Beispiele für die URL einer Liste:
   https://boardgamegeek.com/search/boardgame?sort=rank&advsearch=1&familyids[0]=... (gefilterte Suche)
 Jede Seite enthält 100 Zeilen; mehr Seiten werden bei size > 100 nachgeladen.
 """
+import csv
+import io
 import re
 from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
@@ -61,3 +63,22 @@ def fetch_ranking(url, size=100):
         items += found
         page += 1
     return items[:size]
+
+
+RANK_COLUMNS = {
+    "rank": "Gesamt (alle Brettspiele)", "strategygames_rank": "Strategiespiele", "familygames_rank": "Familienspiele",
+    "thematic_rank": "Thematische Spiele (Thematic)", "wargames_rank": "Kriegsspiele", "partygames_rank": "Partyspiele",
+    "cgs_rank": "Sammelkartenspiele/Customizable", "abstracts_rank": "Abstrakte Spiele", "childrensgames_rank": "Kinderspiele",
+}
+
+
+def parse_csv(text, column="rank", size=100):
+    """BGG-Datenexport (boardgames_ranks.csv, https://boardgamegeek.com/data_dumps/bg_ranks) -> [(rank, id, name, year)]"""
+    rows = []
+    for r in csv.DictReader(io.StringIO(text.lstrip("\ufeff"))):
+        if column not in r:
+            raise ValueError(f"Spalte '{column}' fehlt in der CSV – ist das die BGG-Datei boardgames_ranks.csv?")
+        if r.get("is_expansion") == "1" or not (r[column] or "").isdigit() or int(r[column]) == 0:
+            continue
+        rows.append((int(r[column]), int(r["id"]), r["name"], r.get("yearpublished") or None))
+    return sorted(rows)[:size]

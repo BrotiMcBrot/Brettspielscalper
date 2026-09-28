@@ -63,3 +63,20 @@ def test_manual_games():
     lid = db.add_list(con, "manuell", "")
     db.add_manual_games(con, lid, ["Spiel A", "", "Spiel B"])
     assert [(g["rank"], g["name"]) for g in db.games_of_list(con, lid)] == [(1, "Spiel A"), (2, "Spiel B")]
+
+
+KA_NEW = """<article data-adid="9" data-href="/s-anzeige/brass-birmingham-de-neu/9-23-1"><a href="/s-anzeige/brass-birmingham-de-neu/9-23-1"><span>4</span></a>
+<div><a href="/s-anzeige/brass-birmingham-de-neu/9-23-1">Brass Birmingham DE neu</a><div class="hashed123">35 € VB</div><div>+ Versand ab 4,99 €</div></div></article>
+<article data-adid="10" data-href="/s-anzeige/brass-birmingham-x/10-23-1"><a href="/s-anzeige/brass-birmingham-x/10-23-1"><span>7</span></a></article>"""
+
+
+def test_kleinanzeigen_robust_parse():
+    a, b = kleinanzeigen.parse_results(KA_NEW)
+    assert (a["title"], a["price"], a["negotiable"]) == ("Brass Birmingham DE neu", 35.0, True)
+    assert b["title"] == "brass birmingham x" and b["price"] is None
+
+
+def test_bgg_csv():
+    txt = "id,name,yearpublished,rank,is_expansion,strategygames_rank\n1,B,2000,2,0,1\n2,A,2001,1,0,0\n3,E,2002,3,1,2\n"
+    assert [r[2] for r in bgg.parse_csv(txt)] == ["A", "B"]
+    assert [r[2] for r in bgg.parse_csv(txt, "strategygames_rank")] == ["B"]
