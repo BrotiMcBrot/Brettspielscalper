@@ -5,7 +5,7 @@
  body{font:15px system-ui,sans-serif;max-width:1000px;margin:0 auto;padding:1rem;color:#222}
  nav a{margin-right:1rem} table{border-collapse:collapse;width:100%} td,th{padding:.35rem .5rem;border-bottom:1px solid #ddd;text-align:left}
  input[type=number]{width:6rem} input[type=text]{width:100%;box-sizing:border-box} .muted{color:#777} .good{color:#0a7a2a;font-weight:600}
- .job.bad{background:#fdd}.job{background:#fff6d6;padding:.4rem .7rem;border-radius:4px;margin:.5rem 0}
+ .src{font-size:.8em;color:#777;margin-left:.3rem}tr.grp td{border-top:2px solid #bbb}tr.more td{background:#fafafa}.filters{line-height:2.2}.job.bad{background:#fdd}.job{background:#fff6d6;padding:.4rem .7rem;border-radius:4px;margin:.5rem 0}
 </style></head><body>
 <nav><a href="{{ url_for('deals') }}">Schnäppchen</a><a href="{{ url_for('prices') }}">Neupreise</a><a href="{{ url_for('lists_page') }}">Listen</a><a href="{{ url_for('check_page') }}">Diagnose</a></nav>
 <h1>{% block h %}{% endblock %}</h1>

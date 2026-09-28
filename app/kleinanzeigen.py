@@ -97,7 +97,7 @@ def _search(query):
     return raw
 
 
-def find_offers(names, exclude=()):
+def find_offers(names, exclude=(), need_context=False):
     """names: Suchnamen (z.B. deutscher + englischer Titel). -> (passende Angebote, Anzahl roh gelesener Anzeigen)"""
     found, raw_n = {}, 0
     for name in names:
@@ -105,7 +105,7 @@ def find_offers(names, exclude=()):
         raw_n += len(raw)
         for o in raw:
             if (o["price"] is not None and o["price"] >= MIN_PRICE
-                    and o["category"] in (None, GAMES_CATEGORY) and matches(name, o["title"], exclude)):
+                    and o["category"] in (None, GAMES_CATEGORY) and matches(name, o["title"], exclude, need_context)):
                 found[o["ad_id"]] = o
     return list(found.values()), raw_n
 

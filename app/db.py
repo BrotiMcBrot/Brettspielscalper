@@ -51,6 +51,11 @@ def connect():
     cols = {r[1] for r in con.execute("PRAGMA table_info(games)")}
     if "exclude" not in cols:  # Migration älterer Datenbanken
         con.execute("ALTER TABLE games ADD COLUMN exclude TEXT")
+    ocols = {r[1] for r in con.execute("PRAGMA table_info(offers)")}
+    if "source" not in ocols:
+        con.execute("ALTER TABLE offers ADD COLUMN source TEXT NOT NULL DEFAULT 'kleinanzeigen'")
+    if "auction" not in ocols:
+        con.execute("ALTER TABLE offers ADD COLUMN auction INTEGER NOT NULL DEFAULT 0")
     return con
 
 
@@ -89,20 +94,21 @@ def games_of_list(con, list_id):
     ).fetchall()
 
 
-def replace_offers(con, bgg_id, offers):
-    """offers: [dict(ad_id,title,price,negotiable,location,url)] – ersetzt alle Angebote des Spiels."""
+def replace_offers(con, bgg_id, offers, source="kleinanzeigen"):
+    """offers: [dict(ad_id,title,price,negotiable,location,url[,auction])] – ersetzt die Angebote des Spiels aus dieser Quelle."""
     now = time.time()
-    con.execute("DELETE FROM offers WHERE bgg_id=?", (bgg_id,))
+    con.execute("DELETE FROM offers WHERE bgg_id=? AND source=?", (bgg_id, source))
     for o in offers:
         con.execute(
-            "INSERT OR REPLACE INTO offers(ad_id,bgg_id,title,price,negotiable,location,url,seen_at) "
-            "VALUES (?,?,?,?,?,?,?,?)",
-            (o["ad_id"], bgg_id, o["title"], o["price"], int(o["negotiable"]), o["location"], o["url"], now),
+            "INSERT OR REPLACE INTO offers(ad_id,bgg_id,title,price,negotiable,location,url,seen_at,source,auction) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?)",
+            (o["ad_id"], bgg_id, o["title"], o["price"], int(o["negotiable"]), o["location"], o["url"], now,
+             source, int(o.get("auction", False))),
         )
     con.commit()
 
 
-def deals(con, list_id, max_ratio, min_ratio=0.0):
+def deals(con, list_id, max_ratio, min_ratio=0.0, sources=None):
     """Angebote mit min_ratio * Neupreis <= Preis <= max_ratio * Neupreis (nur Spiele mit bekanntem Neupreis)."""
     return con.execute(
         """SELECT o.*, g.name AS game, g.new_price, li.rank, o.price / g.new_price AS ratio
@@ -110,7 +116,7 @@ def deals(con, list_id, max_ratio, min_ratio=0.0):
            WHERE li.list_id=? AND g.new_price > 0 AND o.price <= ? * g.new_price AND o.price >= ? * g.new_price
            ORDER BY ratio""",
         (list_id, max_ratio, min_ratio),
-    ).fetchall()
+    ).fetchall() if not sources else [r for r in deals(con, list_id, max_ratio, min_ratio) if r["source"] in sources]
 
 
 def add_manual_games(con, list_id, names):

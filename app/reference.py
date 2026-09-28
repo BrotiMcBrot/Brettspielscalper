@@ -20,5 +20,6 @@ def load():
                 "aliases": [a.strip() for a in (r["aliases"] or "").split("|") if a.strip()],
                 "price": float(r["price"]) if (r["price"] or "").strip() else None,
                 "exclude": [e.strip() for e in (r["exclude"] or "").split("|") if e.strip()],
+                "context": (r.get("context") or "").strip() == "1",
             }
     return out

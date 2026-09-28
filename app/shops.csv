@@ -1,0 +1,11 @@
+# Shops für automatische Neupreise. {q} = Suchbegriff. active=0 schaltet einen Shop ab.
+# Die Such-URLs sind nach bestem Wissen eingetragen, aber nicht live geprüft – „Diagnose“ zeigt, welche funktionieren.
+# Eigene Shops einfach ergänzen: Suche im Browser ausführen, Adresse kopieren, Suchbegriff durch {q} ersetzen.
+name;search_url;active
+Spiele-Offensive;https://www.spiele-offensive.de/Spiele-Suche/?Suchbegriff={q};1
+Fantasywelt;https://www.fantasywelt.de/search?sSearch={q};1
+Brettspielversand;https://www.brettspielversand.de/search?sSearch={q};1
+Milan-Spiele;https://www.milan-spiele.de/search?sSearch={q};1
+Spielefreak;https://www.spielefreak.at/search?sSearch={q};0
+Thalia;https://www.thalia.de/suche?sq={q};1
+Geizhals;https://geizhals.de/?fs={q}&hloc=de;0

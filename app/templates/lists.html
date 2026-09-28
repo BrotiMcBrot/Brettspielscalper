@@ -2,8 +2,8 @@
 <table><tr><th>Name</th><th>BGG-URL</th><th>Größe</th><th></th></tr>
 {% for l in lists %}<tr><td>{{ l.name }}</td><td class="muted">{{ l.bgg_url }}</td><td>{{ l.size }}</td><td>
 <form method="post" action="{{ url_for('list_action', list_id=l.id, action='refresh') }}" style="display:inline"><button>1. BGG laden</button></form>
-<form method="post" action="{{ url_for('list_action', list_id=l.id, action='prices') }}" style="display:inline"><button>2. Neupreise (Geizhals)</button></form>
-<form method="post" action="{{ url_for('list_action', list_id=l.id, action='scan') }}" style="display:inline"><button>3. Kleinanzeigen scannen</button></form></td></tr>{% endfor %}</table>
+<form method="post" action="{{ url_for('list_action', list_id=l.id, action='prices') }}" style="display:inline"><button>2. Neupreise aus Shops</button></form>
+<form method="post" action="{{ url_for('list_action', list_id=l.id, action='scan') }}" style="display:inline"><button>3. Angebote scannen</button></form></td></tr>{% endfor %}</table>
 <h3>Neue Liste</h3>
 <form method="post" enctype="multipart/form-data"><p><input type="text" name="name" placeholder="z.B. Top 100 Kampagnenspiele" required></p>
 <p><input type="text" name="url" placeholder="BGG-Browse-/Such-URL (sortiert nach Rang) – oder leer lassen und unten Namen eintragen" list="presets">

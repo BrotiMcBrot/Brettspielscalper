@@ -4,7 +4,7 @@ import re
 
 from bs4 import BeautifulSoup
 
-from . import bgg, geizhals, http, kleinanzeigen
+from . import bgg, ebay, http, kleinanzeigen, shops
 
 DEBUG_DIR = os.path.join(os.path.dirname(__file__), "..", "data", "debug")
 SAMPLE = "Brass Birmingham"
@@ -43,6 +43,26 @@ def _probe(label, url, parser):
 
 def run():
     out = _probe("bgg", "https://boardgamegeek.com/browse/boardgame", bgg.parse_ranking)
-    out += _probe("geizhals", geizhals.search_url(SAMPLE), geizhals.parse_results)
     out += _probe("kleinanzeigen", kleinanzeigen.search_url(SAMPLE, kleinanzeigen.GAMES_CATEGORY), kleinanzeigen.parse_results)
+    for shop in shops.load():
+        out += _probe_shop(shop)
+    out.append("== eBay-API: " + ("eingerichtet" if ebay.configured() else "nicht eingerichtet (optional, siehe README)"))
+    if ebay.configured():
+        try:
+            offers, raw = ebay.find_offers([SAMPLE])
+            out.append(f"   {raw} Artikel gelesen, {len(offers)} passend")
+        except Exception as e:
+            out.append(f"   FEHLER: {e}")
     return "\n".join(out)
+
+
+def _probe_shop(shop):
+    lines = [f"== Shop {shop['name']}"]
+    try:
+        found = shops.find_price([SAMPLE], [shop], blocked := {})
+    except Exception as e:
+        return lines + [f"   FEHLER: {e}"]
+    if blocked:
+        return lines + [f"   BLOCKIERT: {next(iter(blocked.values()))}"]
+    return lines + [f"   OK: {found[0]:.2f} € – {found[1]}" if found else
+                    "   kein Preis gefunden (Such-URL falsch, keine strukturierten Daten, oder Spiel nicht im Sortiment)"]

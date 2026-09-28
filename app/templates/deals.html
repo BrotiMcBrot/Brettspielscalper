@@ -1,13 +1,32 @@
 {% extends "base.html" %}{% block h %}Schnäppchen{% endblock %}{% block body %}
+{% macro offer_cells(r) %}<td><a href="{{ r.url }}" target="_blank" rel="noopener">{{ r.title }}</a>
+ <span class="src">{{ all_sources.get(r.source, r.source) }}{{ ' · Auktion' if r.auction }}</span></td>
+<td>{{ '%.0f'|format(r.price) }} €{{ ' VB' if r.negotiable }}</td>
+<td class="good">−{{ '%.0f'|format((1 - r.ratio)*100) }} % ({{ '%.0f'|format(r.new_price - r.price) }} €)</td><td class="muted">{{ r.location }}</td>{% endmacro %}
 {% if not lists %}<p>Lege zuerst unter <a href="{{ url_for('lists_page') }}">Listen</a> eine Rangliste an.</p>{% else %}
-<form>Liste <select name="list">{% for l in lists %}<option value="{{ l.id }}" {{ 'selected' if l.id==lid }}>{{ l.name }}</option>{% endfor %}</select>
+<form class="filters">Liste <select name="list">{% for l in lists %}<option value="{{ l.id }}" {{ 'selected' if l.id==lid }}>{{ l.name }}</option>{% endfor %}</select>
  mindestens <input type="number" name="discount" value="{{ discount }}" min="0" max="99"> % günstiger als neu,
- aber nicht unter <input type="number" name="floor" value="{{ floor }}" min="0" max="99"> % vom Neupreis
+ nicht unter <input type="number" name="floor" value="{{ floor }}" min="0" max="99"> % vom Neupreis<br>
+ Sortieren <select name="sort">{% for k,(label,_) in sorts.items() %}<option value="{{ k }}" {{ 'selected' if k==sort }}>{{ label }}</option>{% endfor %}</select>
+ <label><input type="radio" name="group" value="1" {{ 'checked' if group }}> je Spiel gruppiert</label>
+ <label><input type="radio" name="group" value="0" {{ 'checked' if not group }}> alle Angebote einzeln</label>
+ · Quellen {% for k,label in all_sources.items() %}<label><input type="checkbox" name="src" value="{{ k }}" {{ 'checked' if k in sources }}> {{ label }}</label> {% endfor %}
  <button>Zeigen</button></form>
-<p class="muted">Die Untergrenze blendet Spottpreise aus – das sind fast immer Zubehör, Einzelteile oder falsche Treffer. Auf 0 setzen, um alles zu sehen.</p>
-<table><tr><th>#</th><th>Spiel</th><th>Angebot</th><th>Preis</th><th>Neupreis</th><th>Ersparnis</th><th>Ort</th></tr>
-{% for r in rows %}<tr><td>{{ r.rank }}</td><td>{{ r.game }}</td><td><a href="{{ r.url }}" target="_blank" rel="noopener">{{ r.title }}</a></td>
-<td>{{ '%.0f'|format(r.price) }} €{{ ' VB' if r.negotiable }}</td><td>{{ '%.0f'|format(r.new_price) }} €</td>
-<td class="good">−{{ '%.0f'|format((1 - r.ratio)*100) }} % ({{ '%.0f'|format(r.new_price - r.price) }} €)</td><td class="muted">{{ r.location }}</td></tr>
-{% else %}<tr><td colspan="7" class="muted">Keine Treffer. Sind Neupreise eingetragen und wurde gescannt?</td></tr>{% endfor %}</table>{% endif %}
+<p class="muted">Die Untergrenze blendet Spottpreise aus – fast immer Zubehör, Einzelteile oder falsche Treffer. Auf 0 setzen, um alles zu sehen.</p>
+{% if group %}
+<p class="muted">{{ groups|length }} Spiele, {{ rows|length }} Angebote. Klick auf ein Spiel zeigt alle Angebote.</p>
+<table><tr><th>#</th><th>Spiel</th><th>Neupreis</th><th>Bestes Angebot</th><th>Preis</th><th>Ersparnis</th><th>Ort</th></tr>
+{% for grp in groups %}{% set best = grp[0] %}
+<tr class="grp"><td>{{ best.rank }}</td><td><b>{{ best.game }}</b>{% if grp|length > 1 %}<br><a href="#" class="toggle" data-g="{{ best.bgg_id }}">{{ grp|length }} Angebote ▾</a>{% endif %}</td>
+<td>{{ '%.0f'|format(best.new_price) }} €</td>{{ offer_cells(best) }}</tr>
+{% for r in grp[1:] %}<tr class="more g{{ best.bgg_id }}" hidden><td></td><td></td><td></td>{{ offer_cells(r) }}</tr>{% endfor %}
+{% else %}<tr><td colspan="7" class="muted">Keine Treffer. Sind Neupreise eingetragen und wurde gescannt?</td></tr>{% endfor %}</table>
+<script>document.querySelectorAll('.toggle').forEach(a=>a.addEventListener('click',e=>{e.preventDefault();
+ const rows=document.querySelectorAll('.g'+a.dataset.g);const open=rows[0].hidden;rows.forEach(r=>r.hidden=!open);
+ a.textContent=a.textContent.replace(open?'▾':'▴',open?'▴':'▾');}));</script>
+{% else %}
+<table><tr><th>#</th><th>Spiel</th><th>Neupreis</th><th>Angebot</th><th>Preis</th><th>Ersparnis</th><th>Ort</th></tr>
+{% for r in rows %}<tr><td>{{ r.rank }}</td><td>{{ r.game }}</td><td>{{ '%.0f'|format(r.new_price) }} €</td>{{ offer_cells(r) }}</tr>
+{% else %}<tr><td colspan="7" class="muted">Keine Treffer. Sind Neupreise eingetragen und wurde gescannt?</td></tr>{% endfor %}</table>
+{% endif %}{% endif %}
 {% endblock %}

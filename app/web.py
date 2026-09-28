@@ -44,14 +44,36 @@ def _current(con):
     return lists, lid
 
 
+SORTS = {
+    "discount": ("Ersparnis %", lambda r: r["ratio"]),
+    "saving": ("Ersparnis €", lambda r: -(r["new_price"] - r["price"])),
+    "price": ("Preis", lambda r: r["price"]),
+    "rank": ("BGG-Rang", lambda r: (r["rank"], r["ratio"])),
+    "name": ("Name", lambda r: (r["game"].lower(), r["ratio"])),
+    "newest": ("Zuletzt gesehen", lambda r: -r["seen_at"]),
+}
+SOURCES = {"kleinanzeigen": "Kleinanzeigen", "ebay": "eBay"}
+
+
 @app.route("/")
 def deals():
     con = db.connect()
     lists, lid = _current(con)
     discount = request.args.get("discount", 50, type=int)   # mindestens so viel % günstiger als neu
     floor = request.args.get("floor", 10, type=int)          # unter X % vom Neupreis ist es fast immer Zubehör/Fehltreffer
-    rows = db.deals(con, lid, 1 - discount / 100, floor / 100) if lid else []
-    return render_template("deals.html", lists=lists, lid=lid, discount=discount, floor=floor, rows=rows)
+    sort = request.args.get("sort", "discount") if request.args.get("sort") in SORTS else "discount"
+    group = request.args.get("group", "1") == "1"
+    sources = request.args.getlist("src") or list(SOURCES)
+    rows = db.deals(con, lid, 1 - discount / 100, floor / 100, sources) if lid else []
+    rows = sorted(rows, key=SORTS[sort][1])
+    groups = []
+    if group:  # ein Block pro Spiel; Reihenfolge nach dem jeweils besten Angebot
+        by_game = {}
+        for r in rows:
+            by_game.setdefault(r["bgg_id"], []).append(r)
+        groups = list(by_game.values())
+    return render_template("deals.html", lists=lists, lid=lid, discount=discount, floor=floor, rows=rows,
+                           groups=groups, group=group, sort=sort, sorts=SORTS, sources=sources, all_sources=SOURCES)
 
 
 @app.route("/prices")

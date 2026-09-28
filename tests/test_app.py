@@ -3,7 +3,7 @@ import tempfile
 
 os.environ["BSS_DB"] = os.path.join(tempfile.mkdtemp(), "t.db")
 
-from app import geizhals, bgg, db, kleinanzeigen, matching  # noqa: E402
+from app import bgg, db, kleinanzeigen, matching  # noqa: E402
 
 BGG_HTML = """<table><tr id='row_'><td class='collection_rank'><a name='1'></a>1</td>
 <td class='collection_objectname'><div><a href='/boardgame/224517/brass-birmingham' class='primary'>Brass: Birmingham</a>
@@ -45,17 +45,6 @@ def test_deals_threshold():
         {"ad_id": "a", "title": "x", "price": 25, "negotiable": False, "location": "", "url": "u"},
         {"ad_id": "b", "title": "y", "price": 45, "negotiable": False, "location": "", "url": "u"}])
     assert [r["ad_id"] for r in db.deals(con, lid, 0.5)] == ["a"]
-
-
-GH_HTML = """<div class="listview__item"><a class="listview__name-link" href="/brass-birmingham-a2100000.html">Brass: Birmingham</a>
-<div class="price">ab € 49,99</div></div>
-<div class="listview__item"><a href="/brass-birmingham-erweiterung-a3.html">Brass Birmingham Erweiterung</a><span>€ 12,00</span></div>"""
-
-
-def test_geizhals_parse():
-    res = geizhals.parse_results(GH_HTML)
-    assert [r["price"] for r in res] == [49.99, 12.0]
-    assert [r["name"] for r in res if matching.matches("Brass: Birmingham", r["name"])] == ["Brass: Birmingham"]
 
 
 def test_manual_games():
@@ -128,7 +117,79 @@ def test_search_plan_and_reference_prices():
                                (3, 999, "Unbekanntes Spiel", None)])
     plan = scan.search_plan(db.games_of_list(con, lid))
     assert "Gloomhaven Pranken des Löwen" in plan[174430][1]
-    assert plan[999][0] == ["Unbekanntes Spiel"]
+    assert plan[999][0] == ["Unbekanntes Spiel"] and plan[999][2] is False
     assert scan.apply_reference_prices(con, lid) == 2
     db.set_price(con, 174430, 99, "manuell")
     assert scan.apply_reference_prices(con, lid) == 0   # manuelle Preise bleiben
+
+
+def test_real_kleinanzeigen_titles():
+    """Echte Titel aus einem Lauf: Spiel|Titel|1=soll passen / 0=soll aussortiert werden."""
+    from app import scan
+    path = os.path.join(os.path.dirname(__file__), "fixtures", "real_titles.txt")
+    pairs = [line.split("|") for line in open(path, encoding="utf-8").read().splitlines() if line]
+    names = sorted({p[0] for p in pairs})
+    games = [{"bgg_id": i, "name": n, "search_name": None, "exclude": None} for i, n in enumerate(names)]
+    plan = scan.search_plan(games)
+    by_name = {g["name"]: plan[g["bgg_id"]] for g in games}
+    wrong = [(g, t) for g, t, exp in pairs
+             if any(matching.matches(n, t, by_name[g][1], by_name[g][2]) for n in by_name[g][0]) != (exp == "1")]
+    assert wrong == []
+
+
+class FakeResp:
+    def __init__(self, text, url="https://shop.de/s", status=200):
+        self.text, self.url, self.status_code = text, url, status
+
+
+def test_shop_price_via_search_and_product_page():
+    from unittest import mock
+    from app import http, shops
+    pages = {
+        "https://shop.de/search?q=Arche+Nova": FakeResp('<a href="/p/1">Arche Nova</a><a href="/p/2">Arche Nova Erweiterung Meeresbiologen</a>',
+                                                         "https://shop.de/search?q=Arche+Nova"),
+        "https://shop.de/p/1": FakeResp('<script type="application/ld+json">{"@type":"Product","name":"Arche Nova",'
+                                        '"offers":{"@type":"Offer","price":"52.99"}}</script>', "https://shop.de/p/1"),
+    }
+    shop = {"name": "Test", "search_url": "https://shop.de/search?q={q}"}
+    with mock.patch.object(http, "get", side_effect=lambda u, **k: pages[u]):
+        price, note = shops.find_price(["Arche Nova"], [shop])
+    assert price == 52.99 and "https://shop.de/p/1" in note
+
+    def blocked(u, **k):
+        raise http.Blocked("shop.de blockiert")
+    seen = {}
+    with mock.patch.object(http, "get", side_effect=blocked):
+        assert shops.find_price(["Arche Nova"], [shop], seen) is None
+    assert "Test" in seen
+
+
+def test_fetch_prices_keeps_manual():
+    from unittest import mock
+    from app import scan, shops
+    con = db.connect()
+    lid = db.add_list(con, "shops", "")
+    db.save_ranking(con, lid, [(1, 501, "Ark Nova", None), (2, 502, "Wingspan", None)])
+    scan.apply_reference_prices(con, lid)
+    db.set_price(con, 502, 33, "manuell")
+    with mock.patch.object(shops, "load", return_value=[{"name": "T", "search_url": "x"}]), \
+         mock.patch.object(shops, "find_price", return_value=(49.0, "Shop T")):
+        errors, summary = scan.fetch_prices(con, lid)
+    prices = {g["bgg_id"]: (g["new_price"], g["price_note"]) for g in db.games_of_list(con, lid)}
+    assert prices[501] == (49.0, "Shop T") and prices[502] == (33, "manuell")
+
+
+def test_deals_grouped_and_sources():
+    from app.web import app
+    con = db.connect()
+    lid = db.add_list(con, "grp", "")
+    db.save_ranking(con, lid, [(1, 601, "Spiel X", None)])
+    db.set_price(con, 601, 100, "manuell")
+    mk = lambda i, p: {"ad_id": i, "title": f"Spiel X {i}", "price": p, "negotiable": False, "location": "", "url": "u"}  # noqa: E731
+    db.replace_offers(con, 601, [mk("k1", 30), mk("k2", 40)])
+    db.replace_offers(con, 601, [dict(mk("e1", 20), auction=True)], "ebay")
+    c = app.test_client()
+    html = c.get(f"/?list={lid}").get_data(as_text=True)
+    assert html.count('class="grp"') == 1 and "3 Angebote" in html and "Auktion" in html
+    html = c.get(f"/?list={lid}&src=kleinanzeigen&group=0&sort=price").get_data(as_text=True)
+    assert "Spiel X e1" not in html and html.index("Spiel X k1") < html.index("Spiel X k2")

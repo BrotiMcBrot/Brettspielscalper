@@ -1,5 +1,5 @@
 """Ablauf: Rangliste laden, Angebote je Spiel suchen und speichern. Jede Funktion liefert (Meldungen, Zusammenfassung)."""
-from . import bgg, db, geizhals, kleinanzeigen, reference
+from . import bgg, db, ebay, kleinanzeigen, reference, shops
 from .matching import base_name, contains, normalize, tokens
 from .http import Blocked
 
@@ -44,9 +44,11 @@ def search_plan(games):
         r = ref.get(normalize(g["name"]), {})
         own = [n.strip() for n in (g["search_name"] or "").split("|") if n.strip()] or r.get("aliases") or [base_name(g["name"])]
         excl = [e.strip() for e in (g["exclude"] or "").split(",") if e.strip()] + r.get("exclude", [])
-        plan[g["bgg_id"]] = (own, excl)
-    for gid, (own, excl) in plan.items():
-        for other, (o_names, _) in plan.items():
+        # einwortige Namen ohne Vorgabe sind oft mehrdeutig → Spiel-Wort im Titel verlangen
+        ctx = r.get("context", False) or (not r and len(tokens(own[0])) == 1 and len(own[0]) <= 6)
+        plan[g["bgg_id"]] = (own, excl, ctx)
+    for gid, (own, excl, _) in plan.items():
+        for other, (o_names, _, _) in plan.items():
             if other == gid:
                 continue
             for on in o_names:
@@ -61,11 +63,20 @@ def scan_offers(con, list_id, progress=None):
     ref_n = apply_reference_prices(con, list_id)
     games = db.games_of_list(con, list_id)  # neu lesen (Preise können sich geändert haben)
     plan = search_plan(games)
-    errors, raw_total, offers_total, with_offers, estimated = [], 0, 0, 0, 0
+    errors, raw_total, offers_total, with_offers, estimated, ebay_n = [], 0, 0, 0, 0, 0
+    use_ebay = ebay.configured()
     for i, g in enumerate(games, 1):
+        names, excl, ctx = plan[g["bgg_id"]]
+        if use_ebay:
+            try:
+                eoffers, _ = ebay.find_offers(names, excl, ctx)
+                db.replace_offers(con, g["bgg_id"], eoffers, "ebay")
+                ebay_n += len(eoffers)
+            except Exception as e:
+                errors.append(f"eBay abgeschaltet für diesen Lauf: {e}")
+                use_ebay = False
         try:
-            names, excl = plan[g["bgg_id"]]
-            offers, raw = kleinanzeigen.find_offers(names, excl)
+            offers, raw = kleinanzeigen.find_offers(names, excl, ctx)
             db.replace_offers(con, g["bgg_id"], offers)
             # Letzter Ausweg: Neupreis aus NEU/OVP-Anzeigen schätzen (nur ohne manuellen Preis / Richtwert)
             note = g["price_note"] or ""
@@ -89,32 +100,44 @@ def scan_offers(con, list_id, progress=None):
             progress(i, len(games), g["name"])
     if not raw_total and not errors:
         errors.insert(0, BLOCKED_HINT)
-    return errors, (f"{len(games)} Spiele durchsucht, {raw_total} Anzeigen gelesen, {offers_total} passende Angebote "
-                    f"für {with_offers} Spiele. Neupreise: {ref_n} Richtwerte, {estimated} aus NEU/OVP-Anzeigen geschätzt.")
+    ebay_txt = f" eBay: {ebay_n} Angebote." if ebay.configured() else " eBay: nicht eingerichtet (siehe README)."
+    return errors, (f"{len(games)} Spiele durchsucht, {raw_total} Kleinanzeigen gelesen, {offers_total} passende Angebote "
+                    f"für {with_offers} Spiele.{ebay_txt} Neupreise: {ref_n} Richtwerte, {estimated} aus NEU/OVP-Anzeigen geschätzt.")
 
 
-def fetch_prices(con, list_id, progress=None, overwrite=False):
-    """Neupreise von Geizhals holen. Manuell eingetragene Preise bleiben unangetastet (außer overwrite)."""
-    games, errors, raw_total, found_n, skipped = _games(con, list_id), [], 0, 0, 0
+MANUAL_NOTES = ("manuell", "Import")
+
+
+def fetch_prices(con, list_id, progress=None):
+    """Neupreise aus Online-Shops (app/shops.csv). Überschreibt Richtwerte/Schätzungen/alte Shop-Preise,
+    aber nie manuell eingetragene oder importierte Preise."""
+    games = _games(con, list_id)
+    plan = search_plan(games)
+    shop_list = shops.load()
+    if not shop_list:
+        raise RuntimeError("Keine aktiven Shops in app/shops.csv.")
+    errors, blocked, found_n, skipped, missing = [], {}, 0, 0, []
     for i, g in enumerate(games, 1):
-        if g["new_price"] and not overwrite:
+        if g["new_price"] and (g["price_note"] or "") in MANUAL_NOTES:
             skipped += 1
             continue
+        names, excl, _ = plan[g["bgg_id"]]
         try:
-            found, raw = geizhals.find_price(g["name"], g["search_name"])
-            raw_total += raw
+            found = shops.find_price(names, shop_list, blocked, excl)
             if found:
                 db.set_price(con, g["bgg_id"], found[0], found[1])
                 found_n += 1
             else:
-                errors.append(f"Kein Treffer: {g['name']} ({raw} Produkte gelesen)")
-        except Blocked as e:
-            errors.insert(0, f"{e} Abbruch – trage Neupreise auf der Seite „Neupreise“ manuell ein (oder Import Name;Preis).")
-            break
+                missing.append(g["name"])
         except Exception as e:
             errors.append(f"{g['name']}: {e}")
         if progress:
             progress(i, len(games), g["name"])
-    if not raw_total and not errors and skipped < len(games):
-        errors.insert(0, BLOCKED_HINT)
-    return errors, f"{found_n} Neupreise gefunden, {skipped} schon vorhanden, {len(games) - skipped - found_n} ohne Preis."
+        if len(blocked) == len(shop_list):
+            errors.insert(0, "Alle Shops blockieren oder sind nicht erreichbar – Abbruch. Details unter „Diagnose“.")
+            break
+    errors = [f"Shop übersprungen: {v}" for v in blocked.values()] + errors
+    if missing:
+        errors.append(f"Kein Shop-Preis für {len(missing)} Spiele (Richtwert bleibt): " + ", ".join(missing[:15])
+                      + (" …" if len(missing) > 15 else ""))
+    return errors, f"{found_n} Neupreise aus Shops, {skipped} manuelle Preise unverändert, {len(missing)} ohne Shop-Treffer."
