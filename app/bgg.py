@@ -72,13 +72,52 @@ RANK_COLUMNS = {
 }
 
 
+def _pick(row, *names):
+    for n in names:
+        if row.get(n) not in (None, ""):
+            return row[n]
+    return None
+
+
 def parse_csv(text, column="rank", size=100):
-    """BGG-Datenexport (boardgames_ranks.csv, https://boardgamegeek.com/data_dumps/bg_ranks) -> [(rank, id, name, year)]"""
-    rows = []
-    for r in csv.DictReader(io.StringIO(text.lstrip("\ufeff"))):
-        if column not in r:
-            raise ValueError(f"Spalte '{column}' fehlt in der CSV – ist das die BGG-Datei boardgames_ranks.csv?")
-        if r.get("is_expansion") == "1" or not (r[column] or "").isdigit() or int(r[column]) == 0:
+    """BGG-CSV -> [(rank, id, name, year)]. Versteht zwei Formate:
+    - Ranglisten-Export boardgames_ranks.csv (Spalten id, name, rank, familygames_rank …): sortiert nach der gewählten Rangliste
+    - eigene Sammlung/Wunschliste (Collection-Export: objectid, objectname, rank, itemtype …): alle Spiele, sortiert nach BGG-Rang
+    Trennzeichen (Komma/Semikolon) wird automatisch erkannt."""
+    text = text.lstrip("\ufeff")
+    try:
+        dialect = csv.Sniffer().sniff(text[:5000], delimiters=",;\t")
+    except csv.Error:
+        dialect = csv.excel
+    reader = csv.DictReader(io.StringIO(text), dialect=dialect)
+    fields = {f.strip().lower() for f in (reader.fieldnames or [])}
+    if not ({"id", "objectid"} & fields and {"name", "objectname", "originalname"} & fields):
+        raise ValueError("Unbekanntes CSV-Format – erwartet wird der BGG-Ranglisten-Export (boardgames_ranks.csv) "
+                         f"oder ein BGG-Sammlungs-Export. Gefundene Spalten: {', '.join(sorted(fields))[:300]}")
+    collection = "objectid" in fields
+    rows, seen = [], set()
+    for i, raw in enumerate(reader, 1):
+        r = {(k or "").strip().lower(): (v or "").strip() for k, v in raw.items()}
+        if r.get("is_expansion") == "1" or r.get("itemtype") == "expansion" or r.get("subtype") == "boardgameexpansion":
             continue
-        rows.append((int(r[column]), int(r["id"]), r["name"], r.get("yearpublished") or None))
-    return sorted(rows)[:size]
+        gid = _pick(r, "id", "objectid")
+        if not (gid or "").isdigit() or gid in seen:
+            continue
+        name = _pick(r, "name", "objectname", "originalname")
+        year = _pick(r, "yearpublished") or None
+        rank_col = column if column in r else "rank"
+        rank_txt = r.get(rank_col, "")
+        if collection:
+            rank = int(rank_txt) if rank_txt.isdigit() and int(rank_txt) > 0 else 100000 + i  # ungerankte ans Ende
+        else:
+            if column not in r:
+                raise ValueError(f"Spalte '{column}' fehlt in der CSV.")
+            if not rank_txt.isdigit() or int(rank_txt) == 0:
+                continue
+            rank = int(rank_txt)
+        seen.add(gid)
+        rows.append((rank, int(gid), name, year))
+    rows.sort()
+    if collection:  # Position in der eigenen Liste statt riesiger Rangnummern
+        rows = [(n, gid, name, year) for n, (_, gid, name, year) in enumerate(rows, 1)]
+    return rows[:size]

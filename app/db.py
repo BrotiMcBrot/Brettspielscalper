@@ -74,7 +74,7 @@ def save_ranking(con, list_id, items):
             "ON CONFLICT(bgg_id) DO UPDATE SET name=excluded.name, year=excluded.year",
             (bgg_id, name, year),
         )
-        con.execute("INSERT INTO list_items(list_id, rank, bgg_id) VALUES (?,?,?)", (list_id, rank, bgg_id))
+        con.execute("INSERT OR IGNORE INTO list_items(list_id, rank, bgg_id) VALUES (?,?,?)", (list_id, rank, bgg_id))
     con.execute("UPDATE lists SET updated_at=? WHERE id=?", (time.time(), list_id))
     con.commit()
 

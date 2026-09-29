@@ -122,6 +122,23 @@ def bulk_prices():
     return redirect(url_for("prices", list=request.form.get("list")))
 
 
+def _size():
+    try:
+        return max(1, int(request.form.get("size") or 100))
+    except ValueError:
+        return 100
+
+
+@app.errorhandler(Exception)
+def show_error(e):
+    """Statt „Internal Server Error“ eine lesbare Seite mit den Details zum Weitergeben."""
+    import traceback
+    from werkzeug.exceptions import HTTPException
+    if isinstance(e, HTTPException):
+        return e
+    return render_template("error.html", error=e, details=traceback.format_exc()), 500
+
+
 @app.route("/lists", methods=["GET", "POST"])
 def lists_page():
     con = db.connect()
@@ -129,18 +146,21 @@ def lists_page():
         csv_file = request.files.get("csv")
         if csv_file and csv_file.filename:
             col = request.form.get("column", "rank")
-            size = int(request.form.get("size", 100))
+            size = _size()
             try:
                 items = bgg.parse_csv(csv_file.read().decode("utf-8", "replace"), col, size)
             except ValueError as e:
                 job.update(text=f"Fehler: {e}", failed=True, errors=[])
                 return redirect(url_for("lists_page"))
-            lid = db.add_list(con, request.form["name"], f"csv:{col}", size)
+            if not items:
+                job.update(text="Fehler: In der CSV wurden keine Spiele gefunden.", failed=True, errors=[])
+                return redirect(url_for("lists_page"))
+            lid = db.add_list(con, request.form.get("name") or csv_file.filename, f"csv:{col}", size)
             db.save_ranking(con, lid, items)
             n = scan.apply_reference_prices(con, lid)
             job.update(text=f"{len(items)} Spiele aus der CSV importiert, {n} Richtwert-Neupreise eingetragen.", failed=False, errors=[])
             return redirect(url_for("lists_page"))
-        lid = db.add_list(con, request.form["name"], request.form.get("url", "").strip(), int(request.form.get("size", 100)))
+        lid = db.add_list(con, request.form.get("name") or "Neue Liste", request.form.get("url", "").strip(), _size())
         db.add_manual_games(con, lid, request.form.get("manual", "").splitlines())
         return redirect(url_for("lists_page"))
     return render_template("lists.html", lists=con.execute("SELECT * FROM lists").fetchall(), presets=PRESETS, columns=bgg.RANK_COLUMNS)

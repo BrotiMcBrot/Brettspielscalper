@@ -1,0 +1,5 @@
+{% extends "base.html" %}{% block h %}Fehler{% endblock %}{% block body %}
+<p class="job bad">{{ error }}</p>
+<p>Das ist ein Fehler in der App. Bitte den folgenden Text kopieren und an Claude schicken:</p>
+<pre style="white-space:pre-wrap;background:#f4f4f4;padding:.7rem;font-size:.85em">{{ details }}</pre>
+<p><a href="{{ url_for('lists_page') }}">Zurück zu den Listen</a></p>{% endblock %}

@@ -58,6 +58,15 @@ def run():
 
 def _probe_shop(shop):
     lines = [f"== Shop {shop['name']}"]
+    from urllib.parse import quote_plus
+    try:  # Suchseite für die Fehlersuche ablegen
+        r = http.get(shop["search_url"].replace("{q}", quote_plus(SAMPLE)))
+        os.makedirs(DEBUG_DIR, exist_ok=True)
+        path = os.path.abspath(os.path.join(DEBUG_DIR, "shop_" + re.sub(r"\W+", "_", shop["name"]) + ".html"))
+        open(path, "w", encoding="utf-8").write(r.text)
+        lines.append(f"   Suchseite: HTTP {r.status_code}, landet auf {r.url} – gespeichert: {path}")
+    except Exception:
+        pass
     try:
         found = shops.find_price([SAMPLE], [shop], blocked := {})
     except Exception as e:

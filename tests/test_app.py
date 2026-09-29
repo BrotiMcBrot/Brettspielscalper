@@ -193,3 +193,38 @@ def test_deals_grouped_and_sources():
     assert html.count('class="grp"') == 1 and "3 Angebote" in html and "Auktion" in html
     html = c.get(f"/?list={lid}&src=kleinanzeigen&group=0&sort=price").get_data(as_text=True)
     assert "Spiel X e1" not in html and html.index("Spiel X k1") < html.index("Spiel X k2")
+
+
+def test_bgg_collection_csv():
+    txt = ("objectname;objectid;rank;yearpublished;itemtype;own\n"
+           "Spirit Island;162886;11;2017;standalone;1\n"
+           "Wingspan;266192;38;2019;standalone;0\n"
+           "Unbekannt;999;0;2024;standalone;1\n"
+           "Wingspan Asien;366161;500;2022;expansion;0\n"
+           "Wingspan;266192;38;2019;standalone;0\n")
+    assert bgg.parse_csv(txt) == [(1, 162886, "Spirit Island", "2017"), (2, 266192, "Wingspan", "2019"), (3, 999, "Unbekannt", "2024")]
+
+
+def test_unknown_csv_and_bad_upload_show_message():
+    import io
+    import pytest
+    from app.web import app, job
+    with pytest.raises(ValueError):
+        bgg.parse_csv("foo,bar\n1,2\n")
+    c = app.test_client()
+    r = c.post("/lists", data={"name": "x", "size": "", "column": "rank", "csv": (io.BytesIO(b"foo,bar\n1,2\n"), "x.csv")},
+               content_type="multipart/form-data")
+    assert r.status_code == 302 and "Unbekanntes CSV-Format" in job["text"]
+    r = c.post("/lists", data={"name": "leer", "size": "", "url": "", "manual": "A"})
+    assert r.status_code == 302
+
+
+def test_error_page_instead_of_500_text():
+    from unittest import mock
+    from app import web
+    with mock.patch.object(web.db, "games_of_list", side_effect=RuntimeError("kaputt")):
+        c = web.app.test_client()
+        con = db.connect()
+        lid = db.add_list(con, "e", "")
+        r = c.get(f"/prices?list={lid}")
+    assert r.status_code == 500 and "kaputt" in r.get_data(as_text=True) and "Traceback" in r.get_data(as_text=True)
