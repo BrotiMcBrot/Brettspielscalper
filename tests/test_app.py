@@ -316,3 +316,19 @@ def test_scan_offers_all_sources():
     assert errors == [] and "mydealz 1" in summary and "Gebraucht-Händler 1" in summary
     srcs = {r["source"]: r["price"] for r in db.deals(con, lid, 0.6)}
     assert srcs == {"kleinanzeigen": 20, "mydealz": 25, "used": 27}
+
+
+def test_shop_image_links_and_listing_jsonld():
+    from app import shops
+    html = ('<a href="/p/brass-birmingham-dt"><img src="x.jpg" alt=""></a>'
+            '<a href="/p/2" title="Arche Nova"><img src="y.jpg"></a>')
+    assert shops.product_links(html, "https://s.de/search", "Brass Birmingham") == ["https://s.de/p/brass-birmingham-dt"]
+    assert shops.product_links(html, "https://s.de/search", "Arche Nova") == ["https://s.de/p/2"]
+    from unittest import mock
+    from app import http
+    listing = ('<script type="application/ld+json">{"@type":"ItemList","itemListElement":['
+               '{"@type":"Product","name":"Azul","url":"/p/azul","offers":{"price":"29.99"}},'
+               '{"@type":"Product","name":"Azul Erweiterung","offers":{"price":"12"}}]}</script>')
+    with mock.patch.object(http, "get", return_value=FakeResp(listing, "https://s.de/search?q=Azul")):
+        assert shops.shop_hit({"name": "S", "search_url": "https://s.de/search?q={q}"}, ["Azul"]) == \
+            (29.99, "Azul", "https://s.de/p/azul")

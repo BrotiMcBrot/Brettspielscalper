@@ -3,7 +3,7 @@
 #             oder "auto:https://www.domain.de" – dann probiert die App die üblichen Such-Adressen selbst durch
 #             und merkt sich die funktionierende (data/shop_patterns.json; Datei löschen = neu ermitteln).
 # „Diagnose“ zeigt für jeden Shop, ob er funktioniert, blockiert oder nichts findet.
-# Blockieren bei dir (HTTP 403): Spiele-Offensive, Fantasywelt, Thalia, Milan-Spiele, Geizhals.
+# Blockieren bei dir (HTTP 403): Spiele-Offensive, Fantasywelt, Thalia, Milan-Spiele, Geizhals, buecher.de, medimops.
 name;search_url;active;type
 Brettspielversand;https://www.brettspielversand.de/search?sSearch={q};1;new
 Games-Island;auto:https://www.games-island.eu;1;new
@@ -13,7 +13,7 @@ Fantasy-In;auto:https://www.fantasyin.de;1;new
 Pegasus-Shop;auto:https://www.pegasusshop.de;1;new
 Spiele-Max;auto:https://www.spiele-max.de;1;new
 Hugendubel;auto:https://www.hugendubel.de;1;new
-buecher.de;auto:https://www.buecher.de;1;new
+buecher.de;auto:https://www.buecher.de;0;new
 Müller;auto:https://www.mueller.de;1;new
 Philibert;auto:https://www.philibertnet.com;1;new
 Smyths Toys;auto:https://www.smythstoys.com/de/de-de;1;new
@@ -22,5 +22,5 @@ Fantasywelt;https://www.fantasywelt.de/search?sSearch={q};0;new
 Milan-Spiele;https://www.milan-spiele.de/search?sSearch={q};0;new
 Thalia;https://www.thalia.de/suche?sq={q};0;new
 Geizhals;https://geizhals.de/?fs={q}&hloc=de;0;new
-medimops;auto:https://www.medimops.de;1;used
+medimops;auto:https://www.medimops.de;0;used
 rebuy;auto:https://www.rebuy.de;1;used

@@ -36,16 +36,25 @@ def parse(data):
             continue
         best = None
         for p in _walk(item.get("prices", [])):
-            price = _num(p.get("price"))
+            # "product" = reiner Artikelpreis, "price" evtl. inkl. Versand – den Artikelpreis bevorzugen
+            price = _num(p.get("product")) or _num(p.get("price"))
             if not price or str(p.get("stock", "Y")).upper() in ("N", "NO", "FALSE", "0"):
                 continue
             if best is None or price < best[0]:
-                store = p.get("store") or p.get("shop") or p.get("storename") or ""
+                store = (p.get("store") or p.get("shop") or p.get("storename") or p.get("store_name")
+                         or p.get("storeName") or p.get("merchant") or "")
                 store = store.get("name", "") if isinstance(store, dict) else store
                 best = (price, f"BoardGamePrices: {store} – {p.get('link') or p.get('url') or ''}".strip(" –"))
         if best:
             out[gid] = best
     return out
+
+
+def raw(bgg_id):
+    """Rohantwort für die Diagnose."""
+    r = http.get(API, params={"eid": str(bgg_id), "sitename": "brettspielscalper", "currency": "EUR",
+                              "destination": "DE", "sort": "CHEAP"})
+    return r.json()
 
 
 def fetch(bgg_ids):

@@ -44,6 +44,20 @@ def _probe(label, url, parser):
 def run():
     out = _probe("bgg", "https://boardgamegeek.com/browse/boardgame", bgg.parse_ranking)
     out += _probe("kleinanzeigen", kleinanzeigen.search_url(SAMPLE, kleinanzeigen.GAMES_CATEGORY), kleinanzeigen.parse_results)
+    try:
+        import json as _json
+        data = bgprices.raw(224517)
+        os.makedirs(DEBUG_DIR, exist_ok=True)
+        path = os.path.abspath(os.path.join(DEBUG_DIR, "bgprices.json"))
+        with open(path, "w", encoding="utf-8") as f:
+            _json.dump(data, f, indent=1, ensure_ascii=False)
+        item = (data.get("items") or [{}])[0] if isinstance(data, dict) else {}
+        first = (item.get("prices") or [{}])[:2]
+        out.append("== BoardGamePrices Rohdaten (bitte mitschicken): Felder " + ", ".join(sorted(item)) )
+        out += ["     " + _json.dumps(p, ensure_ascii=False)[:400] for p in first]
+        out.append(f"     gespeichert: {path}")
+    except Exception as e:
+        out.append(f"== BoardGamePrices Rohdaten: {e}")
     prices, err = bgprices.fetch([224517])  # Brass: Birmingham
     out.append("== BoardGamePrices-API (experimentell): " + (err or (f"OK: {prices[224517][0]:.2f} € – {prices[224517][1]}"
                                                                      if 224517 in prices else "Antwort ohne Preis")))
@@ -74,6 +88,12 @@ def _probe_shop(shop):
         path = os.path.abspath(os.path.join(DEBUG_DIR, "shop_" + re.sub(r"\W+", "_", shop["name"]) + ".html"))
         open(path, "w", encoding="utf-8").write(r.text)
         lines.append(f"   Suchseite: HTTP {r.status_code}, landet auf {r.url} – gespeichert: {path}")
+        soup = BeautifulSoup(r.text, "html.parser")
+        hrefs = [a["href"] for a in soup.find_all("a", href=True)]
+        brass = [h for h in hrefs if "brass" in h.lower()]
+        types = sorted({t for t in re.findall(r'"@type"\s*:\s*"(\w+)"', r.text)})
+        lines.append(f"   {len(hrefs)} Links, davon {len(brass)} mit 'brass': {brass[:3]} · JSON-LD-Typen: {types[:8]}"
+                     + (" · Seite nutzt vermutlich JavaScript zum Nachladen" if len(r.text) < 30000 and not brass else ""))
     except http.Blocked as e:
         return lines + [f"   BLOCKIERT: {e}"]
     except Exception as e:

@@ -56,8 +56,9 @@ def search_url(shop):
         return url
     base = url[5:].rstrip("/")
     cache = _cache()
-    if base in cache:
-        return cache[base]
+    key = base + "|v2"  # v2: bessere Link-Erkennung – alte Fehlschläge neu prüfen
+    if key in cache:
+        return cache[key]
     found = None
     for pattern in PATTERNS:
         cand = base + pattern
@@ -66,7 +67,7 @@ def search_url(shop):
                                         or matches(PROBE_NAMES[0], product_price(resp.text)[1] or "")):
             found = cand
             break
-    cache[base] = found
+    cache[key] = found
     os.makedirs(os.path.dirname(os.path.abspath(CACHE)), exist_ok=True)
     with open(CACHE, "w", encoding="utf-8") as f:
         json.dump(cache, f, indent=1)
@@ -96,9 +97,9 @@ def _walk(node):
             yield from _walk(v)
 
 
-def product_price(html):
-    """-> (preis, name) aus strukturierten Daten einer Produktseite, oder (None, None)."""
-    soup = BeautifulSoup(html, "html.parser")
+def _ld_products(soup):
+    """Alle schema.org-Produkte (JSON-LD) einer Seite -> [(preis, name, url)]"""
+    out = []
     for tag in soup.select('script[type="application/ld+json"]'):
         try:
             data = json.loads(tag.string or tag.get_text() or "")
@@ -108,14 +109,19 @@ def product_price(html):
             types = node.get("@type")
             types = types if isinstance(types, list) else [types]
             if "Product" in types or "ProductGroup" in types:
-                prices = []
-                for off in _walk(node.get("offers") or []):
-                    for key in ("price", "lowPrice"):
-                        p = _num(off.get(key))
-                        if p:
-                            prices.append(p)
+                prices = [p for off in _walk(node.get("offers") or []) for p in
+                          (_num(off.get("price")), _num(off.get("lowPrice"))) if p]
                 if prices:
-                    return min(prices), node.get("name")
+                    out.append((min(prices), node.get("name"), node.get("url")))
+    return out
+
+
+def product_price(html):
+    """-> (preis, name) aus strukturierten Daten einer Produktseite, oder (None, None)."""
+    soup = BeautifulSoup(html, "html.parser")
+    products = _ld_products(soup)
+    if products:
+        return products[0][0], products[0][1]
     for sel in ('[itemprop="price"]', 'meta[property="product:price:amount"]', 'meta[property="og:price:amount"]'):
         el = soup.select_one(sel)
         if el is not None:
@@ -126,13 +132,22 @@ def product_price(html):
     return None, None
 
 
+def _link_text(a):
+    """Linktext; bei Bild-Links title/aria-label/alt, notfalls der Pfad der Adresse ('/brass-birmingham-dt')."""
+    img = a.find("img")
+    for t in (a.get_text(" ", strip=True), a.get("title"), a.get("aria-label"), img.get("alt") if img else None):
+        if t and len(t) > 2:
+            return t
+    return urlparse(a["href"]).path.replace("-", " ").replace("_", " ").replace("/", " ")
+
+
 def product_links(html, base_url, name):
     """Links auf der Suchseite, deren Text (oder title) zum Spielnamen passt – Duplikate raus, max. 3."""
     soup = BeautifulSoup(html, "html.parser")
     host = urlparse(base_url).netloc
     out = []
     for a in soup.find_all("a", href=True):
-        text = a.get_text(" ", strip=True) or a.get("title") or ""
+        text = _link_text(a)
         url = urljoin(base_url, a["href"].split("#")[0])
         if urlparse(url).netloc != host or url in out or url == base_url:
             continue
@@ -156,9 +171,10 @@ def shop_hit(shop, names, exclude=(), blocked=None):
             resp = http.get(template.replace("{q}", quote_plus(name)))
             if resp.status_code != 200:
                 break
-            # manche Shops leiten bei eindeutigem Treffer direkt auf die Produktseite
-            price, pname = product_price(resp.text)
-            hits = [(price, pname, resp.url)] if price and matches(name, pname or "", exclude) else []
+            # Suchseite mit Produktdaten (Liste) oder direkte Weiterleitung auf die Produktseite
+            soup = BeautifulSoup(resp.text, "html.parser")
+            hits = [(p, pn, urljoin(resp.url, u) if u else resp.url) for p, pn, u in _ld_products(soup)
+                    if matches(name, pn or "", exclude)]
             for link in product_links(resp.text, resp.url, name)[:2] if not hits else []:
                 p, pn = product_price(http.get(link).text)
                 if p and matches(name, pn or name, exclude):
