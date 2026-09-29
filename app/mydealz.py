@@ -1,7 +1,7 @@
 """mydealz.de über die offiziellen RSS-Feeds (für Feed-Reader gedacht, kein Scraping).
 
 Es werden die aktuellen Deals der Brettspiel-Gruppe geholt und den Spielen der Liste zugeordnet.
-Das sind Neuware-Angebote von Händlern; verglichen wird mit dem Richtwert (ca. UVP)."""
+Das sind Neuware-Angebote von Händlern; verglichen wird mit dem mittleren Shop-Preis (Median von brettspielpreise.de)."""
 import re
 import xml.etree.ElementTree as ET
 

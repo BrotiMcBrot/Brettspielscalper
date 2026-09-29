@@ -109,7 +109,7 @@ def test_category_and_search_url():
     assert kleinanzeigen.search_url("Brass: Birmingham", "23").endswith("/s-brass-birmingham/k0c23")
 
 
-def test_search_plan_and_reference_prices():
+def test_search_plan_and_no_guessed_prices():
     from app import scan
     con = db.connect()
     lid = db.add_list(con, "plan", "")
@@ -118,10 +118,11 @@ def test_search_plan_and_reference_prices():
     plan = scan.search_plan(db.games_of_list(con, lid))
     assert "Gloomhaven Pranken des Löwen" in plan[174430][1]
     assert plan[999][0] == ["Unbekanntes Spiel"] and plan[999][2] is False
-    assert scan.apply_reference_prices(con, lid) == 2
-    db.set_price(con, 174430, 99, "manuell")
-    assert scan.apply_reference_prices(con, lid) == 0   # manuelle Preise bleiben
-
+    db.set_price(con, 174430, 140, "Richtwert (ca. UVP, bitte prüfen)")  # alter, geschätzter Wert
+    db.set_price(con, 291457, 40, "manuell")
+    assert scan.clear_guessed_prices(con, lid) == 1
+    prices = {g["bgg_id"]: g["new_price"] for g in db.games_of_list(con, lid)}
+    assert prices[174430] is None and prices[291457] == 40
 
 def test_real_kleinanzeigen_titles():
     """Echte Titel aus einem Lauf: Spiel|Titel|1=soll passen / 0=soll aussortiert werden."""
@@ -166,28 +167,26 @@ def test_shop_price_via_search_and_product_page():
 
 def test_fetch_prices_keeps_manual():
     from unittest import mock
-    from app import scan, shops
+    from app import bgprices, scan, shops
     con = db.connect()
     lid = db.add_list(con, "shops", "")
     db.save_ranking(con, lid, [(1, 501, "Ark Nova", None), (2, 502, "Wingspan", None)])
-    scan.apply_reference_prices(con, lid)
     db.set_price(con, 502, 33, "manuell")
-    from app import bgprices
+    bgp = {501: {"min": 45.0, "median": 52.0, "count": 7, "link": "https://b/1"},
+           502: {"min": 40.0, "median": 48.0, "count": 5, "link": "https://b/2"}}
     with mock.patch.object(shops, "load", return_value=[{"name": "T", "search_url": "x"}]), \
          mock.patch.object(shops, "all_prices", return_value=[(49.0, "T", "Arche Nova", "https://t/1")]), \
-         mock.patch.object(bgprices, "fetch", return_value=({501: (45.0, "BoardGamePrices: X")}, None)):
+         mock.patch.object(bgprices, "fetch", return_value=(bgp, None)):
         errors, summary = scan.fetch_prices(con, lid)
-    prices = {g["bgg_id"]: (g["new_price"], g["price_note"]) for g in db.games_of_list(con, lid)}
-    assert prices[501] == (45.0, "BoardGamePrices: X")      # günstigste Quelle gewinnt
-    assert prices[502] == (33, "manuell")                    # manuell bleibt
-    # Shop-Preis ist zusätzlich ein Neuware-Angebot, verglichen mit dem Richtwert (Wingspan 50 €), nicht mit 33 €
-    shop_offers = con.execute("SELECT * FROM offers WHERE source='shop' AND bgg_id=502").fetchall()
-    assert len(shop_offers) == 1
+    games = {g["bgg_id"]: g for g in db.games_of_list(con, lid)}
+    assert games[501]["new_price"] == 45.0 and games[501]["price_note"].startswith("brettspielpreise.de")
+    assert (games[502]["new_price"], games[502]["price_note"]) == (33, "manuell")   # manuell bleibt
+    assert games[501]["ref_price"] == 52.0
+    # Shop-Preis ist zusätzlich ein Neuware-Angebot, verglichen mit dem Median (52 €), nicht mit dem Minimum (45 €)
     db.replace_offers(con, 501, [{"ad_id": "s", "title": "Arche Nova (Neuware)", "price": 25, "negotiable": False,
                                   "location": "T", "url": "u"}], "shop")
     rows = {r["ad_id"]: r for r in db.deals(con, lid, 0.5)}
-    assert rows["s"]["new_price"] == 55  # Richtwert statt Shop-Neupreis 45
-
+    assert rows["s"]["new_price"] == 52.0
 
 def test_deals_grouped_and_sources():
     from app.web import app
@@ -255,12 +254,16 @@ def test_mydealz_feed():
 
 def test_bgprices_parse():
     from app import bgprices
-    data = {"items": [{"external_id": "224517", "name": "Brass: Birmingham", "prices": [
-        {"price": 64.9, "stock": "Y", "store": {"name": "Shop A"}, "link": "https://a"},
-        {"price": 55.0, "stock": "N", "store": "Shop B"},
-        {"price": "59.95", "stock": "Y", "store": "Shop C", "link": "https://c"}]}]}
-    assert bgprices.parse(data) == {224517: (59.95, "BoardGamePrices: Shop C – https://c")}
-
+    # Aufbau wie in der echten Antwort (Diagnose): link, price, product, shipping, stock, country
+    data = {"items": [
+        {"external_id": "224517", "name": "Brass: Birmingham", "prices": [
+            {"link": "https://brettspielpreise.de/item/go?a", "price": 69.89, "product": 69.89, "shipping": "0.00", "stock": "Y"},
+            {"link": "https://brettspielpreise.de/item/go?b", "price": 55.0, "product": 50.0, "shipping": "5.00", "stock": "N"},
+            {"link": "https://brettspielpreise.de/item/go?c", "price": 75.95, "product": 71.95, "shipping": "4.00", "stock": "Y"}]},
+        {"external_id": "224517", "name": "Brass: Birmingham (Deluxe)", "prices": [
+            {"link": "https://brettspielpreise.de/item/go?d", "price": 120.0, "product": 120.0, "stock": "Y"}]}]}
+    r = bgprices.parse(data)[224517]
+    assert (r["min"], r["median"], r["count"], r["link"]) == (69.89, 75.95, 3, "https://brettspielpreise.de/item/go?a")
 
 def test_list_rename_and_delete():
     from app.web import app
@@ -303,6 +306,7 @@ def test_scan_offers_all_sources():
     con = db.connect()
     lid = db.add_list(con, "alle", "")
     db.save_ranking(con, lid, [(1, 801, "Ark Nova", None)])
+    db.set_price(con, 801, 55, "manuell")
     ka = [{"ad_id": "k1", "title": "Arche Nova Brettspiel", "price": 20, "negotiable": True, "location": "", "url": "u", "category": "23"}]
     md = [{"ad_id": "mydealz:1", "title": "Arche Nova für 25€", "price": 25, "negotiable": False, "location": "Amazon", "url": "m"}]
     used = [{"ad_id": "medimops:u", "title": "Arche Nova (medimops, gebraucht)", "price": 27, "negotiable": False,

@@ -1,6 +1,6 @@
 {% extends "base.html" %}{% block h %}Neupreise{% endblock %}{% block body %}
 <form>Liste <select name="list" onchange="this.form.submit()">{% for l in lists %}<option value="{{ l.id }}" {{ 'selected' if l.id==lid }}>{{ l.name }}</option>{% endfor %}</select></form>
-<p class="muted">Preise werden auf der Seite „Listen“ automatisch von Geizhals geholt; hier korrigierst du sie oder trägst fehlende nach. Spiele ohne Neupreis stehen oben. „Suchnamen“ optional, z.B. <i>Flügelschlag|Wingspan</i> – leer = mitgelieferte Vorgabe bzw. BGG-Name. „Ausschließen“: Wörter, die in falschen Treffern vorkommen (z.B. <i>lego, manga</i>). Quelle „Richtwert“ = grobe UVP-Schätzung, bitte prüfen.</p>
+<p class="muted">Preise holt „2. Neupreise holen“ auf der Seite „Listen“ von brettspielpreise.de und Shops; hier korrigierst du sie oder trägst fehlende nach. Spiele ohne Neupreis stehen oben. „Suchnamen“ optional, z.B. <i>Flügelschlag|Wingspan</i> – leer = mitgelieferte Vorgabe bzw. BGG-Name. „Ausschließen“: Wörter, die in falschen Treffern vorkommen (z.B. <i>lego, manga</i>).</p>
 <form method="post"><input type="hidden" name="list" value="{{ lid }}">
 <table><tr><th>#</th><th>Spiel</th><th>Suchnamen (mit | trennen)</th><th>Ausschließen (Wörter, mit Komma)</th><th>Neupreis €</th><th>Quelle</th></tr>
 {% for g in games %}<tr><td>{{ g.rank }}</td><td>{{ g.name }} <span class="muted">{{ g.year }}</span></td>

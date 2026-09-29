@@ -1,7 +1,7 @@
 # Brettspiel-Schnäppchen
 
 Vergleicht BGG-Ranglisten (z. B. die Top 100) mit Angeboten auf Kleinanzeigen.de und zeigt nur die,
-die höchstens X % (Standard 50 %) des Neupreises kosten. Neupreise kommen aus Online-Shops, mitgelieferten Richtwerten oder von dir. Optional wird auch eBay durchsucht.
+die höchstens X % (Standard 50 %) des Neupreises kosten. Neupreise kommen von brettspielpreise.de und Online-Shops oder von dir. Optional wird auch eBay durchsucht.
 
 ## 1. Installation
 
@@ -71,18 +71,20 @@ Liste einfügen. Spiele, die in mehreren Listen vorkommen, teilen sich Neupreis 
     python -m app prices  <listen-id>   # Neupreise aus Shops
     python -m app scan    <listen-id>   # Kleinanzeigen scannen
 
-### Woher kommen die Neupreise? (Reihenfolge)
+### Woher kommen die Neupreise?
+Nur aus echten Daten – es gibt keine geschätzten oder von einer KI erzeugten Preise.
 1. **Manuell** im Reiter *Neupreise* eingetragen – wird nie überschrieben.
-2. **„2. Neupreise holen“** – der günstigste Preis aus allen Quellen gewinnt:
-   - **Online-Shops** aus `app/shops.csv`. Die App liest die strukturierten Produktdaten (schema.org), die fast
-     jeder Shop für Google einbettet. Bei Einträgen `auto:https://www.shop.de` findet sie die Such-Adresse selbst.
-     **Eigenen Shop hinzufügen:** einfach eine Zeile `Name;auto:https://www.shop.de;1;new` ergänzen.
-   - **BoardGamePrices** (boardgameprices.co.uk, Preisvergleich nur für Brettspiele, Abfrage per BGG-ID,
-     Lieferung nach DE) – experimentell, „Diagnose“ zeigt, ob es geht. Braucht echte BGG-IDs (CSV-Import).
-   - **eBay-Neuware** (nur wenn eBay eingerichtet und sonst nichts gefunden): Median der 3 günstigsten
-     Sofortkauf-Angebote im Zustand „Neu“.
-3. **Richtwert** aus `app/reference.csv` (ca. UVP für ~130 bekannte Spiele, grob geschätzt – bitte prüfen).
-4. **Kleinanzeigen-Schätzung**: Median von mind. 3 Anzeigen mit „NEU/OVP/ungespielt“ (Ausreißer entfernt).
+2. **„2. Neupreise holen“** – der günstigste Preis aus diesen Quellen gewinnt:
+   - **brettspielpreise.de** (BoardGamePrices-API): günstigster lieferbarer Shop-Preis inkl. Versand nach
+     Deutschland, abgefragt per BGG-ID. Deckt die meisten deutschen Brettspiel-Shops ab.
+     Braucht echte BGG-IDs – also Listen per CSV-Import, nicht manuell eingetippte Namen.
+   - **Einzelne Shops** aus `app/shops.csv` (derzeit Brettspielversand, Müller). Weitere Zeile
+     `Name;auto:https://www.shop.de;1;new` ergänzen – die App findet die Such-Adresse selbst.
+   - **eBay-Neuware** (nur wenn eBay eingerichtet und sonst nichts gefunden).
+3. **Aus Kleinanzeigen berechnet** (nur wenn 1 und 2 nichts liefern): Median von mind. 3 Anzeigen,
+   die als „NEU/OVP/ungespielt“ inseriert sind.
+
+Die Spalte „Quelle“ im Reiter *Neupreise* zeigt für jedes Spiel, woher der Preis stammt (mit Link).
 
 ### Wie werden falsche Treffer vermieden?
 - Suche nur in der Kleinanzeigen-Kategorie für Spiele (Bücher, Kleidung, Autoteile … fallen raus).
@@ -97,10 +99,10 @@ Liste einfügen. Spiele, die in mehreren Listen vorkommen, teilen sich Neupreis 
 | Kleinanzeigen | Privatangebote | Neupreis |
 | eBay (optional) | Sofortkauf + Auktionen | Neupreis |
 | Gebraucht-Händler | medimops, rebuy (Festpreis, gebraucht) – `type=used` in `app/shops.csv` | Neupreis |
-| mydealz | Deals der Brettspiel-Gruppe per RSS | Richtwert (ca. UVP) |
-| Shops (Neuware) | die beim Neupreis-Holen gefundenen Shop-Preise – zeigt Sale/B-Ware | Richtwert (ca. UVP) |
+| mydealz | Deals der Brettspiel-Gruppe per RSS | mittlerer Shop-Preis |
+| Shops (Neuware) | die beim Neupreis-Holen gefundenen Shop-Preise – zeigt Sale/B-Ware | mittlerer Shop-Preis |
 
-Neuware wird mit dem Richtwert verglichen, weil der Shop-Preis sonst gleichzeitig Neupreis und Angebot wäre.
+Neuware wird mit dem mittleren Preis aller Shops (Median von brettspielpreise.de) verglichen, weil der günstigste Shop-Preis sonst gleichzeitig Neupreis und Angebot wäre.
 Für Neuware ist „50 % günstiger“ selten – stell die Grenze im Reiter *Schnäppchen* z.B. auf 30 %.
 
 **Nicht eingebaut (und warum):** Facebook-Gruppen (Login nötig, Zugriff für Apps gesperrt), Vinted (kein offizieller
@@ -143,7 +145,7 @@ Rot hinterlegte Meldungen sind Fehler. „Fertig“ mit 0 Treffern bedeutet **ni
 | Symptom | Ursache / Lösung |
 |---|---|
 | „BGG antwortete mit HTTP 401/403“ oder „Keine Spiele gefunden“ | BGG blockiert Bot-Zugriffe oder hat das Layout geändert → Parser in `app/bgg.py` anpassen |
-| Viele Spiele ohne Shop-Preis | In *Diagnose* prüfen, welche Shops gehen; Such-URL in `app/shops.csv` korrigieren oder Shops ergänzen; sonst gilt der Richtwert |
+| Viele Spiele ohne Neupreis | In *Diagnose* prüfen, ob brettspielpreise.de antwortet; Spiel per CSV-Import (mit BGG-ID) anlegen, sonst Preis im Reiter *Neupreise* eintragen |
 | Keine Schnäppchen | Neupreise eingetragen? Kleinanzeigen gescannt? Prozentgrenze höher stellen |
 | Falsche Treffer | Suchname präzisieren; Ausschlusswörter stehen in `app/matching.py` |
 

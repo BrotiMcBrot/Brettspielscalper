@@ -51,8 +51,13 @@ def connect():
     cols = {r[1] for r in con.execute("PRAGMA table_info(games)")}
     if "exclude" not in cols:  # Migration älterer Datenbanken
         con.execute("ALTER TABLE games ADD COLUMN exclude TEXT")
-    if "ref_price" not in cols:  # Richtwert (ca. UVP) – Vergleichsbasis für Neuware-Angebote (Shops, mydealz)
+    if "ref_price" not in cols:  # Marktpreis neu (Median der Shop-Preise) – Vergleichsbasis für Neuware-Angebote
         con.execute("ALTER TABLE games ADD COLUMN ref_price REAL")
+    if "ref_source" not in cols:  # Migration: alte, geschätzte Richtwerte verwerfen – nur noch echte Shop-Daten
+        con.execute("ALTER TABLE games ADD COLUMN ref_source TEXT")
+        con.execute("UPDATE games SET ref_price=NULL")
+        con.execute("UPDATE games SET new_price=NULL, price_note=NULL WHERE price_note LIKE 'Richtwert%'")
+        con.commit()
     ocols = {r[1] for r in con.execute("PRAGMA table_info(offers)")}
     if "source" not in ocols:
         con.execute("ALTER TABLE offers ADD COLUMN source TEXT NOT NULL DEFAULT 'kleinanzeigen'")
@@ -110,8 +115,8 @@ def replace_offers(con, bgg_id, offers, source="kleinanzeigen"):
     con.commit()
 
 
-# Neuware (Shop-Preise, mydealz) mit dem Richtwert (ca. UVP) vergleichen – sonst wäre der Shop-Preis
-# gleichzeitig Neupreis und Angebot. Manuelle Neupreise gelten immer.
+# Neuware (Shop-Preise, mydealz) mit dem mittleren Shop-Preis (Median) vergleichen – sonst wäre der günstigste
+# Shop-Preis gleichzeitig Neupreis und Angebot. Manuelle Neupreise gelten immer.
 NEW_GOODS = "('shop', 'mydealz')"
 BASE_PRICE = (f"CASE WHEN o.source IN {NEW_GOODS} AND g.price_note NOT IN ('manuell', 'Import') "
               "THEN COALESCE(g.ref_price, g.new_price) ELSE g.new_price END")

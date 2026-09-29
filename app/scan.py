@@ -23,19 +23,13 @@ def _games(con, list_id):
     return games
 
 
-def apply_reference_prices(con, list_id):
-    """Richtwerte für Spiele ohne Preis (oder mit bloßer Kleinanzeigen-Schätzung) eintragen. -> Anzahl"""
-    ref, n = reference.load(), 0
-    for g in db.games_of_list(con, list_id):
-        r = ref.get(normalize(g["name"]))
-        note = g["price_note"] or ""
-        if r and r["price"]:
-            con.execute("UPDATE games SET ref_price=? WHERE bgg_id=?", (r["price"], g["bgg_id"]))
-        if r and r["price"] and (not g["new_price"] or note.startswith(ESTIMATE)):
-            db.set_price(con, g["bgg_id"], r["price"], reference.NOTE)
-            n += 1
+def clear_guessed_prices(con, list_id):
+    """Früher mitgelieferte, geschätzte Richtwerte entfernen – Neupreise kommen nur noch aus echten Daten. -> Anzahl"""
+    ids = [g["bgg_id"] for g in db.games_of_list(con, list_id) if (g["price_note"] or "").startswith("Richtwert")]
+    for gid in ids:
+        con.execute("UPDATE games SET new_price=NULL, price_note=NULL WHERE bgg_id=?", (gid,))
     con.commit()
-    return n
+    return len(ids)
 
 
 def search_plan(games):
@@ -64,7 +58,7 @@ def search_plan(games):
 def scan_offers(con, list_id, progress=None):
     """Angebote aus allen Quellen: Kleinanzeigen, eBay (falls eingerichtet), mydealz, Gebraucht-Händler."""
     games = _games(con, list_id)
-    ref_n = apply_reference_prices(con, list_id)
+    clear_guessed_prices(con, list_id)
     games = db.games_of_list(con, list_id)  # neu lesen (Preise können sich geändert haben)
     plan = search_plan(games)
     errors, raw_total, offers_total, with_offers, estimated = [], 0, 0, 0, 0
@@ -97,7 +91,7 @@ def scan_offers(con, list_id, progress=None):
             try:
                 offers, raw = kleinanzeigen.find_offers(names, excl, ctx)
                 db.replace_offers(con, gid, offers)
-                # Letzter Ausweg: Neupreis aus NEU/OVP-Anzeigen schätzen (nur ohne manuellen Preis / Richtwert)
+                # Letzter Ausweg: Neupreis aus NEU/OVP-Anzeigen berechnen (nur ohne Preis aus Shops / manuell)
                 note = g["price_note"] or ""
                 if not g["new_price"] or note.startswith(ESTIMATE):
                     est, n = kleinanzeigen.estimate_new_price(offers)
@@ -123,18 +117,19 @@ def scan_offers(con, list_id, progress=None):
     ebay_txt = f"eBay {counts['ebay']}" if ebay.configured() else "eBay nicht eingerichtet"
     return errors, (f"{len(games)} Spiele durchsucht. Kleinanzeigen: {raw_total} gelesen, {offers_total} passend "
                     f"({with_offers} Spiele) · {ebay_txt} · mydealz {counts['mydealz']} · Gebraucht-Händler {counts['used']}. "
-                    f"Neupreise: {ref_n} Richtwerte, {estimated} aus NEU/OVP-Anzeigen geschätzt.")
+                    f"{estimated} Neupreise aus NEU/OVP-Anzeigen berechnet (nur wo „2. Neupreise holen“ nichts fand).")
 
 
 MANUAL_NOTES = ("manuell", "Import")
 
 
 def fetch_prices(con, list_id, progress=None):
-    """Neupreise aus allen Quellen, günstigster gewinnt: Online-Shops (app/shops.csv), BoardGamePrices (per BGG-ID),
-    ersatzweise eBay-Neuware. Überschreibt Richtwerte/Schätzungen/alte Shop-Preise, nie manuelle oder importierte.
-    Shop-Preise werden zusätzlich als Angebote (Quelle „Shop“) gespeichert und mit dem Richtwert verglichen."""
+    """Neupreise aus echten Shop-Daten, günstigster gewinnt:
+    brettspielpreise.de (BoardGamePrices-API, per BGG-ID) · Online-Shops aus app/shops.csv · ersatzweise eBay-Neuware.
+    Manuell eingetragene oder importierte Preise werden nie überschrieben.
+    Zusätzlich: ref_price = Median der Shop-Preise (Vergleichsbasis für Neuware-Angebote)."""
     games = _games(con, list_id)
-    apply_reference_prices(con, list_id)
+    clear_guessed_prices(con, list_id)
     games = db.games_of_list(con, list_id)
     plan = search_plan(games)
     shop_list = shops.load("new")
@@ -152,12 +147,16 @@ def fetch_prices(con, list_id, progress=None):
             db.replace_offers(con, gid, [{"ad_id": f"shop:{shop}:{gid}", "title": f"{pname} (Neuware)", "price": p,
                                           "negotiable": False, "location": shop, "url": url}
                                          for p, shop, pname, url in hits], "shop")
+            if gid in bgp:
+                con.execute("UPDATE games SET ref_price=?, ref_source='brettspielpreise.de' WHERE bgg_id=?",
+                            (bgp[gid]["median"], gid))
+                con.commit()
             if g["new_price"] and (g["price_note"] or "") in MANUAL_NOTES:
                 skipped += 1
             else:
                 cands = [(p, f"Shop {shop}: {pname} – {url}", "shop") for p, shop, pname, url in hits]
                 if gid in bgp:
-                    cands.append((*bgp[gid], "bgp"))
+                    cands.append((bgp[gid]["min"], bgprices.note(bgp[gid]), "bgp"))
                 if not cands and use_ebay:
                     try:
                         e = ebay.new_price(names, excl, ctx)
@@ -178,7 +177,8 @@ def fetch_prices(con, list_id, progress=None):
             progress(i, len(games), g["name"])
     errors = [f"Shop übersprungen: {v}" for v in blocked.values()] + errors
     if missing:
-        errors.append(f"Kein Neupreis gefunden für {len(missing)} Spiele (Richtwert bleibt): " + ", ".join(missing[:15])
+        errors.append(f"Kein Neupreis gefunden für {len(missing)} Spiele – bitte im Reiter „Neupreise“ eintragen "
+                      "(manuell gelistete Spiele haben keine BGG-ID): " + ", ".join(missing[:15])
                       + (" …" if len(missing) > 15 else ""))
-    return errors, (f"Neupreise: {stats['shop']} aus Shops, {stats['bgp']} von BoardGamePrices, {stats['ebay']} von eBay; "
+    return errors, (f"Neupreise: {stats['bgp']} von brettspielpreise.de, {stats['shop']} aus Shops, {stats['ebay']} von eBay; "
                     f"{skipped} manuelle Preise unverändert, {len(missing)} ohne Treffer.")

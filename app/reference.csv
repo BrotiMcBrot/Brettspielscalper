@@ -1,136 +1,136 @@
-# name = BGG-Name (englisch); aliases = Suchnamen für Kleinanzeigen, mit | getrennt; price = ca. UVP in EUR; exclude = Ausschlusswörter, mit | getrennt; context = 1: Titel muss ein Spiel-Wort enthalten (mehrdeutige Namen)
+# Suchhilfen je Spiel: aliases = Suchnamen (mit | getrennt), exclude = Ausschlusswörter, context = 1: Titel muss ein Spiel-Wort enthalten.
 name;aliases;price;exclude;context
-Brass: Birmingham;Brass Birmingham;60;;0
-Brass: Lancashire;Brass Lancashire;60;;0
-Pandemic Legacy: Season 1;Pandemic Legacy Season 1;50;;0
-Pandemic Legacy: Season 2;Pandemic Legacy Season 2;50;;0
-Pandemic Legacy: Season 0;Pandemic Legacy Season 0;50;;0
-Ark Nova;Arche Nova|Ark Nova;55;;0
-Gloomhaven;Gloomhaven;140;pranken|jaws|frosthaven|buttons|knopfe|krabbler;0
-Gloomhaven: Jaws of the Lion;Gloomhaven Pranken des Löwen|Jaws of the Lion;45;;0
-Frosthaven;Frosthaven;230;;0
-Twilight Imperium: Fourth Edition;Twilight Imperium;150;prophecy of kings|rex|second|3rd|3|third|thunder;0
-Dune: Imperium;Dune Imperium;50;uprising|bloodlines|ix|immortality|mindkiller|marker;0
-Dune: Imperium – Uprising;Dune Imperium Uprising;55;marker;0
-Terraforming Mars;Terraforming Mars;50;ares|expedition|prelude|venus|turmoil|kolonien|hellas;0
-Terraforming Mars: Ares Expedition;Ares Expedition;40;;0
-War of the Ring: Second Edition;Der Ringkrieg|War of the Ring;70;festungen|lords of middle earth|warriors of middle earth|kings;0
-Star Wars: Rebellion;Star Wars Rebellion;90;;0
-Spirit Island;Spirit Island;70;ast|tatze|zerklüftete|jagged|invader board|zerkluftete|branch|claw|nature incarnate;0
-Gaia Project;Gaia Project;70;;0
-Twilight Struggle;Twilight Struggle;50;red sea|turn zero|deluxe upgrade;0
-Through the Ages: A New Story of Civilization;Through the Ages;60;;0
-Great Western Trail;Great Western Trail;55;el paso|rails to the north|neuseeland|new zealand|argentinien|argentina;0
-Great Western Trail: Second Edition;Great Western Trail;55;el paso|rails to the north|neuseeland|new zealand|argentinien|argentina;0
-Scythe;Scythe;80;invaders|invatoren|coins|wind gambit|rise of fenris|begegnungen|encounters|modular;0
-Eclipse: Second Dawn for the Galaxy;Eclipse;150;dragon|ship|mitsubishi|jada|spielmaterial;1
-7 Wonders Duel;7 Wonders Duel;25;;0
-7 Wonders;7 Wonders;45;duel;0
-The Castles of Burgundy;Burgen von Burgund|Castles of Burgundy;40;kartenspiel|wurfelspiel|roll write;0
-Concordia;Concordia;50;solitaria|salsa|britannia|gallia;0
-Terra Mystica;Terra Mystica;65;;0
-A Feast for Odin;Ein Fest für Odin|Feast for Odin;80;;0
-Wingspan;Flügelschlag|Wingspan;50;stofftiere|einhorn|pteranodon|vogeltranke|fan art;0
-Everdell;Everdell;60;;0
-Root;Root;60;rollenspiel|roleplaying|vagabunden|exilanten|squires|atelier|heist|marauder|riverfolk|underworld;1
-Lost Ruins of Arnak;Ruinen von Arnak|Lost Ruins of Arnak;50;;0
-Barrage;Barrage;90;;1
-Orléans;Orléans;55;kathedralenbauer|kathedralbauer|johanna|new orleans|invasion;1
-Agricola;Agricola;60;;0
-Caverna: The Cave Farmers;Caverna;80;hohle gegen hohle|hohle um hohle|eisenzeit;0
-Puerto Rico;Puerto Rico;40;san juan|kartenspiel|1897;0
-Mage Knight Board Game;Mage Knight;80;;0
-Nemesis;Nemesis;150;lockdown|now|marvel|legends|retaliation;1
-Blood Rage;Blood Rage;80;;0
-Kingdom Death: Monster;Kingdom Death Monster;400;echoes|pinups|survivors|armor|knight|manhunter|slenderman|gorm|lion god|spidicules|frogdog|dung beetle|sunlantern|gamblers|dragon king|flower|expansion;0
-Too Many Bones;Too Many Bones;130;nugget|ghillie|dart|splice|gearloc|undertow|unbreakable|hoplomachus|solar;0
-Viticulture Essential Edition;Viticulture;55;rheingau|tuscany|toskana|visit;0
-Tzolk'in: The Mayan Calendar;Tzolkin;55;;0
-Mansions of Madness: Second Edition;Villen des Wahnsinns|Mansions of Madness;100;silver tablet|streets of arkham|horrific journeys|sanctum|beyond the threshold|path of the serpent;0
-Food Chain Magnate;Food Chain Magnate;90;;0
-Android: Netrunner;Android Netrunner;40;;0
-Heat: Pedal to the Metal;Heat Pedal to the Metal;55;;1
-Cascadia;Cascadia;35;rolling rivers|happy meal|landmarks;0
-The Crew: The Quest for Planet Nine;Die Crew Reist gemeinsam|Die Crew Planet Neun;15;tiefsee|deep sea;0
-The Crew: Mission Deep Sea;Die Crew Mission Tiefsee|Die Crew Tiefsee;15;;0
-Sky Team;Sky Team;30;;0
-Marvel Champions: The Card Game;Marvel Champions;60;hercules|vision|heldenpaket|hero pack|szenariopaket;0
-Arkham Horror: The Card Game;Arkham Horror Kartenspiel|Arkham Horror LCG;50;mythos|pfeile|zeloten|altar|museum|kampagne|ermittler;0
-Star Wars: Imperial Assault;Star Wars Imperial Assault;100;;0
-Race for the Galaxy;Race for the Galaxy;30;;0
-Codenames;Codenames;20;;0
-Azul;Azul;35;;0
-Hegemony: Lead Your Class to Victory;Hegemony;110;;1
-Oathsworn: Into the Deepwood;Oathsworn;200;armory|miniatures|map;0
-Darwin's Journey;Darwins Journey;70;;0
-Lisboa;Lisboa;90;mercado|tram;1
-On Mars;On Mars;110;magic maze|life on mars;1
-Maracaibo;Maracaibo;60;;1
-Beyond the Sun;Beyond the Sun;60;;0
-The Quacks of Quedlinburg;Quacksalber von Quedlinburg;40;;0
-Power Grid;Funkenschlag;45;kartenspiel|erste funken|fabrikmanager|outpost|deluxe;0
-Paladins of the West Kingdom;Paladine des Westfrankenreichs;50;;0
-Architects of the West Kingdom;Architekten des Westfrankenreichs;40;;0
-Underwater Cities;Underwater Cities;65;;0
-Le Havre;Le Havre;60;binnenhafen;0
-Anachrony;Anachrony;90;risse der zeit|fractures|infinity|exosuit;0
-Revive;Revive;60;;1
-Bomb Busters;Bomb Busters;20;;0
-Pax Pamir: Second Edition;Pax Pamir;60;;0
-Mechs vs. Minions;Mechs vs Minions;90;;0
-Crokinole;Crokinole;150;;0
-Kanban EV;Kanban EV;80;;0
-Grand Austria Hotel;Grand Austria Hotel;50;hochsaison;0
-Obsession;Obsession;70;;1
-Sleeping Gods;Sleeping Gods;90;;0
-Voidfall;Voidfall;110;;0
-Earth;Earth;50;;1
-The Castles of Mad King Ludwig;Schlösser des König Ludwig|Castles of Mad King Ludwig;45;;0
-Five Tribes;Five Tribes;45;;0
-Istanbul;Istanbul;40;wurfelspiel|brief;1
-Trickerion: Legends of Illusion;Trickerion;70;;0
-Kemet: Blood and Sand;Kemet;100;;0
-Cthulhu: Death May Die;Cthulhu Death May Die;100;charakter|relic|tableaus|season 2|fear of the unknown;0
-The 7th Continent;7th Continent;90;;0
-Undaunted: Normandy;Undaunted Normandy;40;;0
-Aeon's End;Aeons End;45;;0
-Dominion;Dominion;40;;1
-Patchwork;Patchwork;20;;0
-Tigris & Euphrates;Euphrat & Tigris|Tigris & Euphrates;45;;0
-El Grande;El Grande;50;;0
-Robinson Crusoe: Adventures on the Cursed Island;Robinson Crusoe;60;;0
-Eldritch Horror;Eldritch Horror;60;;0
-Clank!: A Deck-Building Adventure;Clank;45;legacy|space|catacombs|katakomben;0
-Clank! Legacy: Acquisitions Incorporated;Clank Legacy;80;;0
-Boonlake;Boonlake;60;;0
-Hansa Teutonica;Hansa Teutonica;45;;0
-Inis;Inis;70;;1
-Age of Innovation;Age of Innovation;80;;0
-Harmonies;Harmonies;35;;1
-SETI: Search for Extraterrestrial Intelligence;SETI;70;dikkat|hexagames|butehorn;1
-Arcs;Arcs;70;;1
-Nucleum;Nucleum;80;;0
-Ra;Ra Knizia;40;;1
-Carcassonne;Carcassonne;35;;0
-Twilight Imperium: Third Edition;Twilight Imperium;120;;0
-Arkwright;Arkwright;70;;0
-Great Western Trail: New Zealand;Great Western Trail Neuseeland;55;;0
-Spirit Island: Jagged Earth;Spirit Island Zerklüftete Erde;60;;0
-Cyclades;Cyclades;60;;0
-Lorenzo il Magnifico;Lorenzo il Magnifico|Lorenzo der Prächtige;50;;0
-Mombasa;Mombasa;55;;0
-Trajan;Trajan;45;;0
-Troyes;Troyes;45;;0
-Tapestry;Tapestry;90;;1
-Keyflower;Keyflower;45;;0
-The Gallerist;The Gallerist;80;;0
-Lords of Waterdeep;Lords of Waterdeep;45;;0
-Blood on the Clocktower;Blood on the Clocktower;90;sortier|boxen|erzahlergeschichten;0
-Mysterium;Mysterium;40;;0
-Decrypto;Decrypto;20;;0
-Just One;Just One;20;;0
-The Mind;The Mind Kartenspiel;10;;0
-Railroad Ink;Railroad Ink;20;;0
-Splendor;Splendor;30;duel;0
-Splendor Duel;Splendor Duel;25;;0
-Final Girl;Final Girl;30;lore|scenario|feature film;0
+Brass: Birmingham;Brass Birmingham;;;0
+Brass: Lancashire;Brass Lancashire;;;0
+Pandemic Legacy: Season 1;Pandemic Legacy Season 1;;;0
+Pandemic Legacy: Season 2;Pandemic Legacy Season 2;;;0
+Pandemic Legacy: Season 0;Pandemic Legacy Season 0;;;0
+Ark Nova;Arche Nova|Ark Nova;;;0
+Gloomhaven;Gloomhaven;;pranken|jaws|frosthaven|buttons|knopfe|krabbler;0
+Gloomhaven: Jaws of the Lion;Gloomhaven Pranken des Löwen|Jaws of the Lion;;;0
+Frosthaven;Frosthaven;;;0
+Twilight Imperium: Fourth Edition;Twilight Imperium;;prophecy of kings|rex|second|3rd|3|third|thunder;0
+Dune: Imperium;Dune Imperium;;uprising|bloodlines|ix|immortality|mindkiller|marker;0
+Dune: Imperium – Uprising;Dune Imperium Uprising;;marker;0
+Terraforming Mars;Terraforming Mars;;ares|expedition|prelude|venus|turmoil|kolonien|hellas;0
+Terraforming Mars: Ares Expedition;Ares Expedition;;;0
+War of the Ring: Second Edition;Der Ringkrieg|War of the Ring;;festungen|lords of middle earth|warriors of middle earth|kings;0
+Star Wars: Rebellion;Star Wars Rebellion;;;0
+Spirit Island;Spirit Island;;ast|tatze|zerklüftete|jagged|invader board|zerkluftete|branch|claw|nature incarnate;0
+Gaia Project;Gaia Project;;;0
+Twilight Struggle;Twilight Struggle;;red sea|turn zero|deluxe upgrade;0
+Through the Ages: A New Story of Civilization;Through the Ages;;;0
+Great Western Trail;Great Western Trail;;el paso|rails to the north|neuseeland|new zealand|argentinien|argentina;0
+Great Western Trail: Second Edition;Great Western Trail;;el paso|rails to the north|neuseeland|new zealand|argentinien|argentina;0
+Scythe;Scythe;;invaders|invatoren|coins|wind gambit|rise of fenris|begegnungen|encounters|modular;0
+Eclipse: Second Dawn for the Galaxy;Eclipse;;dragon|ship|mitsubishi|jada|spielmaterial;1
+7 Wonders Duel;7 Wonders Duel;;;0
+7 Wonders;7 Wonders;;duel;0
+The Castles of Burgundy;Burgen von Burgund|Castles of Burgundy;;kartenspiel|wurfelspiel|roll write;0
+Concordia;Concordia;;solitaria|salsa|britannia|gallia;0
+Terra Mystica;Terra Mystica;;;0
+A Feast for Odin;Ein Fest für Odin|Feast for Odin;;;0
+Wingspan;Flügelschlag|Wingspan;;stofftiere|einhorn|pteranodon|vogeltranke|fan art;0
+Everdell;Everdell;;;0
+Root;Root;;rollenspiel|roleplaying|vagabunden|exilanten|squires|atelier|heist|marauder|riverfolk|underworld;1
+Lost Ruins of Arnak;Ruinen von Arnak|Lost Ruins of Arnak;;;0
+Barrage;Barrage;;;1
+Orléans;Orléans;;kathedralenbauer|kathedralbauer|johanna|new orleans|invasion;1
+Agricola;Agricola;;;0
+Caverna: The Cave Farmers;Caverna;;hohle gegen hohle|hohle um hohle|eisenzeit;0
+Puerto Rico;Puerto Rico;;san juan|kartenspiel|1897;0
+Mage Knight Board Game;Mage Knight;;;0
+Nemesis;Nemesis;;lockdown|now|marvel|legends|retaliation;1
+Blood Rage;Blood Rage;;;0
+Kingdom Death: Monster;Kingdom Death Monster;;echoes|pinups|survivors|armor|knight|manhunter|slenderman|gorm|lion god|spidicules|frogdog|dung beetle|sunlantern|gamblers|dragon king|flower|expansion;0
+Too Many Bones;Too Many Bones;;nugget|ghillie|dart|splice|gearloc|undertow|unbreakable|hoplomachus|solar;0
+Viticulture Essential Edition;Viticulture;;rheingau|tuscany|toskana|visit;0
+Tzolk'in: The Mayan Calendar;Tzolkin;;;0
+Mansions of Madness: Second Edition;Villen des Wahnsinns|Mansions of Madness;;silver tablet|streets of arkham|horrific journeys|sanctum|beyond the threshold|path of the serpent;0
+Food Chain Magnate;Food Chain Magnate;;;0
+Android: Netrunner;Android Netrunner;;;0
+Heat: Pedal to the Metal;Heat Pedal to the Metal;;;1
+Cascadia;Cascadia;;rolling rivers|happy meal|landmarks;0
+The Crew: The Quest for Planet Nine;Die Crew Reist gemeinsam|Die Crew Planet Neun;;tiefsee|deep sea;0
+The Crew: Mission Deep Sea;Die Crew Mission Tiefsee|Die Crew Tiefsee;;;0
+Sky Team;Sky Team;;;0
+Marvel Champions: The Card Game;Marvel Champions;;hercules|vision|heldenpaket|hero pack|szenariopaket;0
+Arkham Horror: The Card Game;Arkham Horror Kartenspiel|Arkham Horror LCG;;mythos|pfeile|zeloten|altar|museum|kampagne|ermittler;0
+Star Wars: Imperial Assault;Star Wars Imperial Assault;;;0
+Race for the Galaxy;Race for the Galaxy;;;0
+Codenames;Codenames;;;0
+Azul;Azul;;;0
+Hegemony: Lead Your Class to Victory;Hegemony;;;1
+Oathsworn: Into the Deepwood;Oathsworn;;armory|miniatures|map;0
+Darwin's Journey;Darwins Journey;;;0
+Lisboa;Lisboa;;mercado|tram;1
+On Mars;On Mars;;magic maze|life on mars;1
+Maracaibo;Maracaibo;;;1
+Beyond the Sun;Beyond the Sun;;;0
+The Quacks of Quedlinburg;Quacksalber von Quedlinburg;;;0
+Power Grid;Funkenschlag;;kartenspiel|erste funken|fabrikmanager|outpost|deluxe;0
+Paladins of the West Kingdom;Paladine des Westfrankenreichs;;;0
+Architects of the West Kingdom;Architekten des Westfrankenreichs;;;0
+Underwater Cities;Underwater Cities;;;0
+Le Havre;Le Havre;;binnenhafen;0
+Anachrony;Anachrony;;risse der zeit|fractures|infinity|exosuit;0
+Revive;Revive;;;1
+Bomb Busters;Bomb Busters;;;0
+Pax Pamir: Second Edition;Pax Pamir;;;0
+Mechs vs. Minions;Mechs vs Minions;;;0
+Crokinole;Crokinole;;;0
+Kanban EV;Kanban EV;;;0
+Grand Austria Hotel;Grand Austria Hotel;;hochsaison;0
+Obsession;Obsession;;;1
+Sleeping Gods;Sleeping Gods;;;0
+Voidfall;Voidfall;;;0
+Earth;Earth;;;1
+The Castles of Mad King Ludwig;Schlösser des König Ludwig|Castles of Mad King Ludwig;;;0
+Five Tribes;Five Tribes;;;0
+Istanbul;Istanbul;;wurfelspiel|brief;1
+Trickerion: Legends of Illusion;Trickerion;;;0
+Kemet: Blood and Sand;Kemet;;;0
+Cthulhu: Death May Die;Cthulhu Death May Die;;charakter|relic|tableaus|season 2|fear of the unknown;0
+The 7th Continent;7th Continent;;;0
+Undaunted: Normandy;Undaunted Normandy;;;0
+Aeon's End;Aeons End;;;0
+Dominion;Dominion;;;1
+Patchwork;Patchwork;;;0
+Tigris & Euphrates;Euphrat & Tigris|Tigris & Euphrates;;;0
+El Grande;El Grande;;;0
+Robinson Crusoe: Adventures on the Cursed Island;Robinson Crusoe;;;0
+Eldritch Horror;Eldritch Horror;;;0
+Clank!: A Deck-Building Adventure;Clank;;legacy|space|catacombs|katakomben;0
+Clank! Legacy: Acquisitions Incorporated;Clank Legacy;;;0
+Boonlake;Boonlake;;;0
+Hansa Teutonica;Hansa Teutonica;;;0
+Inis;Inis;;;1
+Age of Innovation;Age of Innovation;;;0
+Harmonies;Harmonies;;;1
+SETI: Search for Extraterrestrial Intelligence;SETI;;dikkat|hexagames|butehorn;1
+Arcs;Arcs;;;1
+Nucleum;Nucleum;;;0
+Ra;Ra Knizia;;;1
+Carcassonne;Carcassonne;;;0
+Twilight Imperium: Third Edition;Twilight Imperium;;;0
+Arkwright;Arkwright;;;0
+Great Western Trail: New Zealand;Great Western Trail Neuseeland;;;0
+Spirit Island: Jagged Earth;Spirit Island Zerklüftete Erde;;;0
+Cyclades;Cyclades;;;0
+Lorenzo il Magnifico;Lorenzo il Magnifico|Lorenzo der Prächtige;;;0
+Mombasa;Mombasa;;;0
+Trajan;Trajan;;;0
+Troyes;Troyes;;;0
+Tapestry;Tapestry;;;1
+Keyflower;Keyflower;;;0
+The Gallerist;The Gallerist;;;0
+Lords of Waterdeep;Lords of Waterdeep;;;0
+Blood on the Clocktower;Blood on the Clocktower;;sortier|boxen|erzahlergeschichten;0
+Mysterium;Mysterium;;;0
+Decrypto;Decrypto;;;0
+Just One;Just One;;;0
+The Mind;The Mind Kartenspiel;;;0
+Railroad Ink;Railroad Ink;;;0
+Splendor;Splendor;;duel;0
+Splendor Duel;Splendor Duel;;;0
+Final Girl;Final Girl;;lore|scenario|feature film;0

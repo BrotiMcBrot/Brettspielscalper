@@ -59,8 +59,9 @@ def run():
     except Exception as e:
         out.append(f"== BoardGamePrices Rohdaten: {e}")
     prices, err = bgprices.fetch([224517])  # Brass: Birmingham
-    out.append("== BoardGamePrices-API (experimentell): " + (err or (f"OK: {prices[224517][0]:.2f} € – {prices[224517][1]}"
-                                                                     if 224517 in prices else "Antwort ohne Preis")))
+    out.append("== brettspielpreise.de (BoardGamePrices-API): " + (err or (
+        f"OK – Brass: Birmingham ab {prices[224517]['min']:.2f} € ({prices[224517]['count']} Shop-Preise, "
+        f"Median {prices[224517]['median']:.2f} €)" if 224517 in prices else "Antwort ohne Preis")))
     deals, errs = mydealz.fetch_all()
     out.append(f"== mydealz-RSS: {len(deals)} Brettspiel-Deals gelesen" + (f" – {'; '.join(errs)}" if errs else ""))
     out += [f"     - {d['price']:.2f} € {d['title'][:80]}" for d in deals[:3]]

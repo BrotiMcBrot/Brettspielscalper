@@ -1,14 +1,11 @@
-"""Mitgelieferte Richtwerte: ungefähre Neupreise (UVP, EUR), deutsche Suchnamen, Ausschlusswörter.
-
-Die Preise sind grobe Schätzwerte – bitte im Reiter „Neupreise“ prüfen und korrigieren.
-Manuell eingetragene Preise haben immer Vorrang."""
+"""Mitgelieferte Suchhilfen je Spiel: deutsche Suchnamen, Ausschlusswörter, Kontext-Pflicht.
+Enthält keine Preise – Neupreise kommen ausschließlich aus Shop-Daten oder von dir."""
 import csv
 import os
 
 from .matching import normalize
 
 PATH = os.path.join(os.path.dirname(__file__), "reference.csv")
-NOTE = "Richtwert (ca. UVP, bitte prüfen)"
 
 
 def load():
