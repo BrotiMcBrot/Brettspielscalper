@@ -172,11 +172,21 @@ def test_fetch_prices_keeps_manual():
     db.save_ranking(con, lid, [(1, 501, "Ark Nova", None), (2, 502, "Wingspan", None)])
     scan.apply_reference_prices(con, lid)
     db.set_price(con, 502, 33, "manuell")
+    from app import bgprices
     with mock.patch.object(shops, "load", return_value=[{"name": "T", "search_url": "x"}]), \
-         mock.patch.object(shops, "find_price", return_value=(49.0, "Shop T")):
+         mock.patch.object(shops, "all_prices", return_value=[(49.0, "T", "Arche Nova", "https://t/1")]), \
+         mock.patch.object(bgprices, "fetch", return_value=({501: (45.0, "BoardGamePrices: X")}, None)):
         errors, summary = scan.fetch_prices(con, lid)
     prices = {g["bgg_id"]: (g["new_price"], g["price_note"]) for g in db.games_of_list(con, lid)}
-    assert prices[501] == (49.0, "Shop T") and prices[502] == (33, "manuell")
+    assert prices[501] == (45.0, "BoardGamePrices: X")      # günstigste Quelle gewinnt
+    assert prices[502] == (33, "manuell")                    # manuell bleibt
+    # Shop-Preis ist zusätzlich ein Neuware-Angebot, verglichen mit dem Richtwert (Wingspan 50 €), nicht mit 33 €
+    shop_offers = con.execute("SELECT * FROM offers WHERE source='shop' AND bgg_id=502").fetchall()
+    assert len(shop_offers) == 1
+    db.replace_offers(con, 501, [{"ad_id": "s", "title": "Arche Nova (Neuware)", "price": 25, "negotiable": False,
+                                  "location": "T", "url": "u"}], "shop")
+    rows = {r["ad_id"]: r for r in db.deals(con, lid, 0.5)}
+    assert rows["s"]["new_price"] == 55  # Richtwert statt Shop-Neupreis 45
 
 
 def test_deals_grouped_and_sources():
@@ -228,3 +238,81 @@ def test_error_page_instead_of_500_text():
         lid = db.add_list(con, "e", "")
         r = c.get(f"/prices?list={lid}")
     assert r.status_code == 500 and "kaputt" in r.get_data(as_text=True) and "Traceback" in r.get_data(as_text=True)
+
+
+def test_mydealz_feed():
+    from app import mydealz
+    xml = """<?xml version="1.0"?><rss xmlns:pepper="http://www.pepper.com/rss"><channel>
+<item><title>Arche Nova Brettspiel für 29,99€ [Amazon]</title><link>https://www.mydealz.de/deals/1</link><guid>1</guid>
+<pepper:merchant name="Amazon" price="29,99€"/></item>
+<item><title>Flügelschlag Erweiterung Ozeanien 15€</title><link>https://www.mydealz.de/deals/2</link><guid>2</guid></item>
+<item><title>Irgendwas ohne Preis</title><link>https://www.mydealz.de/deals/3</link></item></channel></rss>"""
+    deals = mydealz.parse_feed(xml)
+    assert [(d["price"], d["location"]) for d in deals] == [(29.99, "Amazon"), (15.0, "")]
+    assert [d["ad_id"] for d in mydealz.for_game(deals, ["Arche Nova"])] == ["mydealz:1"]
+    assert mydealz.for_game(deals, ["Flügelschlag"]) == []   # Erweiterung
+
+
+def test_bgprices_parse():
+    from app import bgprices
+    data = {"items": [{"external_id": "224517", "name": "Brass: Birmingham", "prices": [
+        {"price": 64.9, "stock": "Y", "store": {"name": "Shop A"}, "link": "https://a"},
+        {"price": 55.0, "stock": "N", "store": "Shop B"},
+        {"price": "59.95", "stock": "Y", "store": "Shop C", "link": "https://c"}]}]}
+    assert bgprices.parse(data) == {224517: (59.95, "BoardGamePrices: Shop C – https://c")}
+
+
+def test_list_rename_and_delete():
+    from app.web import app
+    con = db.connect()
+    a = db.add_list(con, "A", "")
+    b = db.add_list(con, "B", "")
+    db.save_ranking(con, a, [(1, 701, "Nur in A", None), (2, 702, "In beiden", None)])
+    db.save_ranking(con, b, [(1, 702, "In beiden", None)])
+    db.replace_offers(con, 701, [{"ad_id": "x701", "title": "t", "price": 1, "negotiable": False, "location": "", "url": "u"}])
+    c = app.test_client()
+    c.post(f"/lists/{a}/rename", data={"name": "Neu A"})
+    assert con.execute("SELECT name FROM lists WHERE id=?", (a,)).fetchone()[0] == "Neu A"
+    c.post(f"/lists/{a}/delete")
+    assert con.execute("SELECT COUNT(*) FROM lists WHERE id=?", (a,)).fetchone()[0] == 0
+    assert con.execute("SELECT COUNT(*) FROM games WHERE bgg_id=701").fetchone()[0] == 0
+    assert con.execute("SELECT COUNT(*) FROM offers WHERE bgg_id=701").fetchone()[0] == 0
+    assert con.execute("SELECT COUNT(*) FROM games WHERE bgg_id=702").fetchone()[0] == 1
+
+
+def test_shop_auto_search_url(tmp_path):
+    from unittest import mock
+    from app import http, shops
+    calls = []
+
+    def fake(u, **k):
+        calls.append(u)
+        if u.startswith("https://s.de/search?search="):
+            return FakeResp('<a href="/p/azul">Azul - Brettspiel</a>', u)
+        return FakeResp("<html>nichts</html>", u)
+    with mock.patch.object(shops, "CACHE", str(tmp_path / "c.json")), mock.patch.object(http, "get", side_effect=fake):
+        assert shops.search_url({"name": "S", "search_url": "auto:https://s.de"}) == "https://s.de/search?search={q}"
+        n = len(calls)
+        assert shops.search_url({"name": "S", "search_url": "auto:https://s.de"}) == "https://s.de/search?search={q}"
+        assert len(calls) == n  # gemerkt
+
+
+def test_scan_offers_all_sources():
+    from unittest import mock
+    from app import ebay, mydealz, scan, shops
+    con = db.connect()
+    lid = db.add_list(con, "alle", "")
+    db.save_ranking(con, lid, [(1, 801, "Ark Nova", None)])
+    ka = [{"ad_id": "k1", "title": "Arche Nova Brettspiel", "price": 20, "negotiable": True, "location": "", "url": "u", "category": "23"}]
+    md = [{"ad_id": "mydealz:1", "title": "Arche Nova für 25€", "price": 25, "negotiable": False, "location": "Amazon", "url": "m"}]
+    used = [{"ad_id": "medimops:u", "title": "Arche Nova (medimops, gebraucht)", "price": 27, "negotiable": False,
+             "location": "medimops", "url": "x"}]
+    with mock.patch.object(kleinanzeigen, "_search", return_value=ka), \
+         mock.patch.object(mydealz, "fetch_all", return_value=(md, [])), \
+         mock.patch.object(shops, "load", return_value=[{"name": "medimops", "search_url": "x", "type": "used"}]), \
+         mock.patch.object(shops, "used_offers", return_value=used), \
+         mock.patch.object(ebay, "configured", return_value=False):
+        errors, summary = scan.scan_offers(con, lid)
+    assert errors == [] and "mydealz 1" in summary and "Gebraucht-Händler 1" in summary
+    srcs = {r["source"]: r["price"] for r in db.deals(con, lid, 0.6)}
+    assert srcs == {"kleinanzeigen": 20, "mydealz": 25, "used": 27}

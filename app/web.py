@@ -52,7 +52,7 @@ SORTS = {
     "name": ("Name", lambda r: (r["game"].lower(), r["ratio"])),
     "newest": ("Zuletzt gesehen", lambda r: -r["seen_at"]),
 }
-SOURCES = {"kleinanzeigen": "Kleinanzeigen", "ebay": "eBay"}
+SOURCES = {"kleinanzeigen": "Kleinanzeigen", "ebay": "eBay", "used": "Gebraucht-Händler", "mydealz": "mydealz", "shop": "Shops (Neuware)"}
 
 
 @app.route("/")
@@ -164,6 +164,23 @@ def lists_page():
         db.add_manual_games(con, lid, request.form.get("manual", "").splitlines())
         return redirect(url_for("lists_page"))
     return render_template("lists.html", lists=con.execute("SELECT * FROM lists").fetchall(), presets=PRESETS, columns=bgg.RANK_COLUMNS)
+
+
+@app.post("/lists/<int:list_id>/rename")
+def rename_list(list_id):
+    name = request.form.get("name", "").strip()
+    if name:
+        db.rename_list(db.connect(), list_id, name)
+    return redirect(url_for("lists_page"))
+
+
+@app.post("/lists/<int:list_id>/delete")
+def delete_list(list_id):
+    if job["running"]:
+        job.update(text="Fehler: Während ein Lauf aktiv ist, kann keine Liste gelöscht werden.", failed=True, errors=[])
+    else:
+        db.delete_list(db.connect(), list_id)
+    return redirect(url_for("lists_page"))
 
 
 @app.post("/lists/<int:list_id>/<action>")

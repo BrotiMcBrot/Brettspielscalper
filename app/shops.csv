@@ -1,12 +1,26 @@
-# Shops für automatische Neupreise. {q} = Suchbegriff. active=0 schaltet einen Shop ab.
-# Spiele-Offensive, Fantasywelt, Thalia: blockieren (HTTP 403) → abgeschaltet.
-# Die Such-URLs sind nach bestem Wissen eingetragen, aber nicht live geprüft – „Diagnose“ zeigt, welche funktionieren.
-# Eigene Shops einfach ergänzen: Suche im Browser ausführen, Adresse kopieren, Suchbegriff durch {q} ersetzen.
-name;search_url;active
-Spiele-Offensive;https://www.spiele-offensive.de/Spiele-Suche/?Suchbegriff={q};0
-Fantasywelt;https://www.fantasywelt.de/search?sSearch={q};0
-Brettspielversand;https://www.brettspielversand.de/search?sSearch={q};1
-Milan-Spiele;https://www.milan-spiele.de/search?sSearch={q};1
-Spielefreak;https://www.spielefreak.at/search?sSearch={q};0
-Thalia;https://www.thalia.de/suche?sq={q};0
-Geizhals;https://geizhals.de/?fs={q}&hloc=de;0
+# Shops für Neupreise (type=new) und Gebraucht-Händler (type=used). active=0 schaltet einen Shop ab.
+# search_url: entweder eine Such-Adresse mit {q} als Platzhalter
+#             oder "auto:https://www.domain.de" – dann probiert die App die üblichen Such-Adressen selbst durch
+#             und merkt sich die funktionierende (data/shop_patterns.json; Datei löschen = neu ermitteln).
+# „Diagnose“ zeigt für jeden Shop, ob er funktioniert, blockiert oder nichts findet.
+# Blockieren bei dir (HTTP 403): Spiele-Offensive, Fantasywelt, Thalia, Milan-Spiele, Geizhals.
+name;search_url;active;type
+Brettspielversand;https://www.brettspielversand.de/search?sSearch={q};1;new
+Games-Island;auto:https://www.games-island.eu;1;new
+Spieletastisch;auto:https://www.spieletastisch.de;1;new
+Magierspiele;auto:https://www.magierspiele.de;1;new
+Fantasy-In;auto:https://www.fantasyin.de;1;new
+Pegasus-Shop;auto:https://www.pegasusshop.de;1;new
+Spiele-Max;auto:https://www.spiele-max.de;1;new
+Hugendubel;auto:https://www.hugendubel.de;1;new
+buecher.de;auto:https://www.buecher.de;1;new
+Müller;auto:https://www.mueller.de;1;new
+Philibert;auto:https://www.philibertnet.com;1;new
+Smyths Toys;auto:https://www.smythstoys.com/de/de-de;1;new
+Spiele-Offensive;https://www.spiele-offensive.de/Spiele-Suche/?Suchbegriff={q};0;new
+Fantasywelt;https://www.fantasywelt.de/search?sSearch={q};0;new
+Milan-Spiele;https://www.milan-spiele.de/search?sSearch={q};0;new
+Thalia;https://www.thalia.de/suche?sq={q};0;new
+Geizhals;https://geizhals.de/?fs={q}&hloc=de;0;new
+medimops;auto:https://www.medimops.de;1;used
+rebuy;auto:https://www.rebuy.de;1;used

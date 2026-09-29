@@ -1,5 +1,5 @@
 """Ablauf: Rangliste laden, Angebote je Spiel suchen und speichern. Jede Funktion liefert (Meldungen, Zusammenfassung)."""
-from . import bgg, db, ebay, kleinanzeigen, reference, shops
+from . import bgg, bgprices, db, ebay, kleinanzeigen, mydealz, reference, shops
 from .matching import base_name, contains, normalize, tokens
 from .http import Blocked
 
@@ -29,9 +29,12 @@ def apply_reference_prices(con, list_id):
     for g in db.games_of_list(con, list_id):
         r = ref.get(normalize(g["name"]))
         note = g["price_note"] or ""
+        if r and r["price"]:
+            con.execute("UPDATE games SET ref_price=? WHERE bgg_id=?", (r["price"], g["bgg_id"]))
         if r and r["price"] and (not g["new_price"] or note.startswith(ESTIMATE)):
             db.set_price(con, g["bgg_id"], r["price"], reference.NOTE)
             n += 1
+    con.commit()
     return n
 
 
@@ -59,85 +62,123 @@ def search_plan(games):
 
 
 def scan_offers(con, list_id, progress=None):
+    """Angebote aus allen Quellen: Kleinanzeigen, eBay (falls eingerichtet), mydealz, Gebraucht-Händler."""
     games = _games(con, list_id)
     ref_n = apply_reference_prices(con, list_id)
     games = db.games_of_list(con, list_id)  # neu lesen (Preise können sich geändert haben)
     plan = search_plan(games)
-    errors, raw_total, offers_total, with_offers, estimated, ebay_n = [], 0, 0, 0, 0, 0
+    errors, raw_total, offers_total, with_offers, estimated = [], 0, 0, 0, 0
+    counts = {"ebay": 0, "mydealz": 0, "used": 0}
     use_ebay = ebay.configured()
+    md_deals, md_err = mydealz.fetch_all()
+    errors += md_err
+    used_shops, used_blocked = shops.load("used"), {}
+    ka_ok = True
     for i, g in enumerate(games, 1):
         names, excl, ctx = plan[g["bgg_id"]]
+        gid = g["bgg_id"]
+        # mydealz: Feed wurde einmal geladen, hier nur zuordnen
+        md = mydealz.for_game(md_deals, names, excl, ctx)
+        db.replace_offers(con, gid, md, "mydealz")
+        counts["mydealz"] += len(md)
         if use_ebay:
             try:
                 eoffers, _ = ebay.find_offers(names, excl, ctx)
-                db.replace_offers(con, g["bgg_id"], eoffers, "ebay")
-                ebay_n += len(eoffers)
+                db.replace_offers(con, gid, eoffers, "ebay")
+                counts["ebay"] += len(eoffers)
             except Exception as e:
                 errors.append(f"eBay abgeschaltet für diesen Lauf: {e}")
                 use_ebay = False
-        try:
-            offers, raw = kleinanzeigen.find_offers(names, excl, ctx)
-            db.replace_offers(con, g["bgg_id"], offers)
-            # Letzter Ausweg: Neupreis aus NEU/OVP-Anzeigen schätzen (nur ohne manuellen Preis / Richtwert)
-            note = g["price_note"] or ""
-            if not g["new_price"] or note.startswith(ESTIMATE):
-                est, n = kleinanzeigen.estimate_new_price(offers)
-                if est:
-                    db.set_price(con, g["bgg_id"], est, f"{ESTIMATE} (Median aus {n} NEU/OVP-Anzeigen)")
-                    estimated += 1
-                elif note.startswith(ESTIMATE):  # alte, evtl. falsche Schätzung nicht stehen lassen
-                    con.execute("UPDATE games SET new_price=NULL, price_note=NULL WHERE bgg_id=?", (g["bgg_id"],))
-                    con.commit()
-            raw_total += raw
-            offers_total += len(offers)
-            with_offers += bool(offers)
-        except Blocked as e:
-            errors.insert(0, f"{e} Abbruch. Später erneut versuchen.")
-            break
-        except Exception as e:  # ein Fehler soll den Gesamtlauf nicht abbrechen
-            errors.append(f"{g['name']}: {e}")
+        if used_shops and len(used_blocked) < len(used_shops):
+            used = shops.used_offers(names, excl, used_blocked, used_shops)
+            db.replace_offers(con, gid, used, "used")
+            counts["used"] += len(used)
+        if ka_ok:
+            try:
+                offers, raw = kleinanzeigen.find_offers(names, excl, ctx)
+                db.replace_offers(con, gid, offers)
+                # Letzter Ausweg: Neupreis aus NEU/OVP-Anzeigen schätzen (nur ohne manuellen Preis / Richtwert)
+                note = g["price_note"] or ""
+                if not g["new_price"] or note.startswith(ESTIMATE):
+                    est, n = kleinanzeigen.estimate_new_price(offers)
+                    if est:
+                        db.set_price(con, gid, est, f"{ESTIMATE} (Median aus {n} NEU/OVP-Anzeigen)")
+                        estimated += 1
+                    elif note.startswith(ESTIMATE):  # alte, evtl. falsche Schätzung nicht stehen lassen
+                        con.execute("UPDATE games SET new_price=NULL, price_note=NULL WHERE bgg_id=?", (gid,))
+                        con.commit()
+                raw_total += raw
+                offers_total += len(offers)
+                with_offers += bool(offers)
+            except Blocked as e:
+                errors.insert(0, f"{e} Kleinanzeigen für diesen Lauf abgeschaltet.")
+                ka_ok = False
+            except Exception as e:  # ein Fehler soll den Gesamtlauf nicht abbrechen
+                errors.append(f"{g['name']}: {e}")
         if progress:
             progress(i, len(games), g["name"])
-    if not raw_total and not errors:
+    if not raw_total and ka_ok and not errors:
         errors.insert(0, BLOCKED_HINT)
-    ebay_txt = f" eBay: {ebay_n} Angebote." if ebay.configured() else " eBay: nicht eingerichtet (siehe README)."
-    return errors, (f"{len(games)} Spiele durchsucht, {raw_total} Kleinanzeigen gelesen, {offers_total} passende Angebote "
-                    f"für {with_offers} Spiele.{ebay_txt} Neupreise: {ref_n} Richtwerte, {estimated} aus NEU/OVP-Anzeigen geschätzt.")
+    errors += [f"Gebraucht-Händler übersprungen: {v}" for v in used_blocked.values()]
+    ebay_txt = f"eBay {counts['ebay']}" if ebay.configured() else "eBay nicht eingerichtet"
+    return errors, (f"{len(games)} Spiele durchsucht. Kleinanzeigen: {raw_total} gelesen, {offers_total} passend "
+                    f"({with_offers} Spiele) · {ebay_txt} · mydealz {counts['mydealz']} · Gebraucht-Händler {counts['used']}. "
+                    f"Neupreise: {ref_n} Richtwerte, {estimated} aus NEU/OVP-Anzeigen geschätzt.")
 
 
 MANUAL_NOTES = ("manuell", "Import")
 
 
 def fetch_prices(con, list_id, progress=None):
-    """Neupreise aus Online-Shops (app/shops.csv). Überschreibt Richtwerte/Schätzungen/alte Shop-Preise,
-    aber nie manuell eingetragene oder importierte Preise."""
+    """Neupreise aus allen Quellen, günstigster gewinnt: Online-Shops (app/shops.csv), BoardGamePrices (per BGG-ID),
+    ersatzweise eBay-Neuware. Überschreibt Richtwerte/Schätzungen/alte Shop-Preise, nie manuelle oder importierte.
+    Shop-Preise werden zusätzlich als Angebote (Quelle „Shop“) gespeichert und mit dem Richtwert verglichen."""
     games = _games(con, list_id)
+    apply_reference_prices(con, list_id)
+    games = db.games_of_list(con, list_id)
     plan = search_plan(games)
-    shop_list = shops.load()
-    if not shop_list:
-        raise RuntimeError("Keine aktiven Shops in app/shops.csv.")
-    errors, blocked, found_n, skipped, missing = [], {}, 0, 0, []
+    shop_list = shops.load("new")
+    errors, blocked, skipped, missing = [], {}, 0, []
+    stats = {"shop": 0, "bgp": 0, "ebay": 0}
+    bgp, bgp_err = bgprices.fetch([g["bgg_id"] for g in games])
+    if bgp_err:
+        errors.append(bgp_err)
+    use_ebay = ebay.configured()
     for i, g in enumerate(games, 1):
-        if g["new_price"] and (g["price_note"] or "") in MANUAL_NOTES:
-            skipped += 1
-            continue
-        names, excl, _ = plan[g["bgg_id"]]
+        gid = g["bgg_id"]
+        names, excl, ctx = plan[gid]
         try:
-            found = shops.find_price(names, shop_list, blocked, excl)
-            if found:
-                db.set_price(con, g["bgg_id"], found[0], found[1])
-                found_n += 1
+            hits = shops.all_prices(names, shop_list, blocked, excl) if len(blocked) < len(shop_list) else []
+            db.replace_offers(con, gid, [{"ad_id": f"shop:{shop}:{gid}", "title": f"{pname} (Neuware)", "price": p,
+                                          "negotiable": False, "location": shop, "url": url}
+                                         for p, shop, pname, url in hits], "shop")
+            if g["new_price"] and (g["price_note"] or "") in MANUAL_NOTES:
+                skipped += 1
             else:
-                missing.append(g["name"])
+                cands = [(p, f"Shop {shop}: {pname} – {url}", "shop") for p, shop, pname, url in hits]
+                if gid in bgp:
+                    cands.append((*bgp[gid], "bgp"))
+                if not cands and use_ebay:
+                    try:
+                        e = ebay.new_price(names, excl, ctx)
+                        if e:
+                            cands.append((*e, "ebay"))
+                    except Exception as ex:
+                        errors.append(f"eBay abgeschaltet für diesen Lauf: {ex}")
+                        use_ebay = False
+                if cands:
+                    price, note, src = min(cands)
+                    db.set_price(con, gid, price, note)
+                    stats[src] += 1
+                else:
+                    missing.append(g["name"])
         except Exception as e:
             errors.append(f"{g['name']}: {e}")
         if progress:
             progress(i, len(games), g["name"])
-        if len(blocked) == len(shop_list):
-            errors.insert(0, "Alle Shops blockieren oder sind nicht erreichbar – Abbruch. Details unter „Diagnose“.")
-            break
     errors = [f"Shop übersprungen: {v}" for v in blocked.values()] + errors
     if missing:
-        errors.append(f"Kein Shop-Preis für {len(missing)} Spiele (Richtwert bleibt): " + ", ".join(missing[:15])
+        errors.append(f"Kein Neupreis gefunden für {len(missing)} Spiele (Richtwert bleibt): " + ", ".join(missing[:15])
                       + (" …" if len(missing) > 15 else ""))
-    return errors, f"{found_n} Neupreise aus Shops, {skipped} manuelle Preise unverändert, {len(missing)} ohne Shop-Treffer."
+    return errors, (f"Neupreise: {stats['shop']} aus Shops, {stats['bgp']} von BoardGamePrices, {stats['ebay']} von eBay; "
+                    f"{skipped} manuelle Preise unverändert, {len(missing)} ohne Treffer.")

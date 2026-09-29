@@ -40,7 +40,7 @@ Alles passiert in der Weboberfläche mit den drei Reitern **Schnäppchen**, **Ne
      Die Spiele sind sofort drin; „1. BGG laden“ ist dann nicht nötig.
    - Alternativ: Spielnamen manuell eintragen (einer pro Zeile), oder – nur falls BGG bei dir doch antwortet –
      eine BGG-URL wie `https://boardgamegeek.com/browse/boardgame` und „1. BGG laden“.
-3. **„2. Neupreise aus Shops“** klicken – sucht jedes Spiel in den Online-Shops aus `app/shops.csv`
+3. **„2. Neupreise holen“** klicken – sucht jedes Spiel in den Online-Shops aus `app/shops.csv`
    und speichert den günstigsten Preis. Shops, die blockieren oder nicht erreichbar sind, werden übersprungen. Bereits eingetragene (auch manuelle) Preise werden nicht überschrieben.
    Spiele ohne Treffer werden oben als Hinweis aufgelistet.
 4. **Reiter *Neupreise*:** Fehlende Preise nachtragen oder falsche korrigieren. Spiele ohne Preis stehen oben.
@@ -73,11 +73,14 @@ Liste einfügen. Spiele, die in mehreren Listen vorkommen, teilen sich Neupreis 
 
 ### Woher kommen die Neupreise? (Reihenfolge)
 1. **Manuell** im Reiter *Neupreise* eingetragen – wird nie überschrieben.
-2. **Shop-Preis** („2. Neupreise aus Shops“): günstigster Preis aus den Shops in `app/shops.csv`.
-   Die App liest die strukturierten Produktdaten (schema.org), die fast jeder Shop für Google einbettet –
-   darum funktioniert jeder Shop ohne eigenen Parser. **Eigenen Shop hinzufügen:** im Browser dort nach
-   „Brass Birmingham“ suchen, Adresse kopieren, den Suchbegriff durch `{q}` ersetzen und als neue Zeile
-   eintragen. Im Reiter *Diagnose* siehst du, welche Shops funktionieren.
+2. **„2. Neupreise holen“** – der günstigste Preis aus allen Quellen gewinnt:
+   - **Online-Shops** aus `app/shops.csv`. Die App liest die strukturierten Produktdaten (schema.org), die fast
+     jeder Shop für Google einbettet. Bei Einträgen `auto:https://www.shop.de` findet sie die Such-Adresse selbst.
+     **Eigenen Shop hinzufügen:** einfach eine Zeile `Name;auto:https://www.shop.de;1;new` ergänzen.
+   - **BoardGamePrices** (boardgameprices.co.uk, Preisvergleich nur für Brettspiele, Abfrage per BGG-ID,
+     Lieferung nach DE) – experimentell, „Diagnose“ zeigt, ob es geht. Braucht echte BGG-IDs (CSV-Import).
+   - **eBay-Neuware** (nur wenn eBay eingerichtet und sonst nichts gefunden): Median der 3 günstigsten
+     Sofortkauf-Angebote im Zustand „Neu“.
 3. **Richtwert** aus `app/reference.csv` (ca. UVP für ~130 bekannte Spiele, grob geschätzt – bitte prüfen).
 4. **Kleinanzeigen-Schätzung**: Median von mind. 3 Anzeigen mit „NEU/OVP/ungespielt“ (Ausreißer entfernt).
 
@@ -87,6 +90,25 @@ Liste einfügen. Spiele, die in mehreren Listen vorkommen, teilen sich Neupreis 
 - Globale Ausschlusswörter (Lego, Manga, Erweiterung, Sleeves, 3D-Druck, Figuren …) in `app/matching.py`.
 - Pro Spiel: deutsche Suchnamen und eigene Ausschlusswörter im Reiter *Neupreise* (Vorgaben in `app/reference.csv`).
 - Enthält ein anderes Spiel der Liste den Namen (Gloomhaven → „Gloomhaven: Pranken des Löwen“), wird es ausgeschlossen.
+
+### Angebots-Quellen („3. Angebote scannen“)
+| Quelle | Was | Verglichen mit |
+|---|---|---|
+| Kleinanzeigen | Privatangebote | Neupreis |
+| eBay (optional) | Sofortkauf + Auktionen | Neupreis |
+| Gebraucht-Händler | medimops, rebuy (Festpreis, gebraucht) – `type=used` in `app/shops.csv` | Neupreis |
+| mydealz | Deals der Brettspiel-Gruppe per RSS | Richtwert (ca. UVP) |
+| Shops (Neuware) | die beim Neupreis-Holen gefundenen Shop-Preise – zeigt Sale/B-Ware | Richtwert (ca. UVP) |
+
+Neuware wird mit dem Richtwert verglichen, weil der Shop-Preis sonst gleichzeitig Neupreis und Angebot wäre.
+Für Neuware ist „50 % günstiger“ selten – stell die Grenze im Reiter *Schnäppchen* z.B. auf 30 %.
+
+**Nicht eingebaut (und warum):** Facebook-Gruppen (Login nötig, Zugriff für Apps gesperrt), Vinted (kein offizieller
+Zugang, starker Bot-Schutz), BGG GeekMarket (BGG blockiert). Tipp: dort die eigenen Suchalarme der Apps nutzen.
+
+### Listen verwalten
+Im Reiter *Listen* kannst du den Namen direkt im Feld ändern (✎ speichert) und Listen löschen. Beim Löschen
+verschwinden auch Spiele, Preise und Angebote, die in keiner anderen Liste stehen.
 
 ### eBay einrichten (optional, kostenlos)
 eBay verbietet das automatische Auslesen seiner Webseiten, bietet aber eine offizielle, kostenlose Schnittstelle:

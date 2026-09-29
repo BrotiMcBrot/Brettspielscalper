@@ -51,6 +51,8 @@ def connect():
     cols = {r[1] for r in con.execute("PRAGMA table_info(games)")}
     if "exclude" not in cols:  # Migration älterer Datenbanken
         con.execute("ALTER TABLE games ADD COLUMN exclude TEXT")
+    if "ref_price" not in cols:  # Richtwert (ca. UVP) – Vergleichsbasis für Neuware-Angebote (Shops, mydealz)
+        con.execute("ALTER TABLE games ADD COLUMN ref_price REAL")
     ocols = {r[1] for r in con.execute("PRAGMA table_info(offers)")}
     if "source" not in ocols:
         con.execute("ALTER TABLE offers ADD COLUMN source TEXT NOT NULL DEFAULT 'kleinanzeigen'")
@@ -108,12 +110,20 @@ def replace_offers(con, bgg_id, offers, source="kleinanzeigen"):
     con.commit()
 
 
+# Neuware (Shop-Preise, mydealz) mit dem Richtwert (ca. UVP) vergleichen – sonst wäre der Shop-Preis
+# gleichzeitig Neupreis und Angebot. Manuelle Neupreise gelten immer.
+NEW_GOODS = "('shop', 'mydealz')"
+BASE_PRICE = (f"CASE WHEN o.source IN {NEW_GOODS} AND g.price_note NOT IN ('manuell', 'Import') "
+              "THEN COALESCE(g.ref_price, g.new_price) ELSE g.new_price END")
+
+
 def deals(con, list_id, max_ratio, min_ratio=0.0, sources=None):
     """Angebote mit min_ratio * Neupreis <= Preis <= max_ratio * Neupreis (nur Spiele mit bekanntem Neupreis)."""
     return con.execute(
-        """SELECT o.*, g.name AS game, g.new_price, li.rank, o.price / g.new_price AS ratio
-           FROM offers o JOIN games g USING(bgg_id) JOIN list_items li USING(bgg_id)
-           WHERE li.list_id=? AND g.new_price > 0 AND o.price <= ? * g.new_price AND o.price >= ? * g.new_price
+        f"""SELECT * FROM (
+             SELECT o.*, g.name AS game, li.rank, {BASE_PRICE} AS new_price, o.price / ({BASE_PRICE}) AS ratio
+             FROM offers o JOIN games g USING(bgg_id) JOIN list_items li USING(bgg_id) WHERE li.list_id=?)
+           WHERE new_price > 0 AND price <= ? * new_price AND price >= ? * new_price
            ORDER BY ratio""",
         (list_id, max_ratio, min_ratio),
     ).fetchall() if not sources else [r for r in deals(con, list_id, max_ratio, min_ratio) if r["source"] in sources]
@@ -129,4 +139,19 @@ def add_manual_games(con, list_id, names):
         gid = min(0, con.execute("SELECT COALESCE(MIN(bgg_id),0) FROM games").fetchone()[0]) - 1
         con.execute("INSERT INTO games(bgg_id, name) VALUES (?,?)", (gid, name))
         con.execute("INSERT INTO list_items(list_id, rank, bgg_id) VALUES (?,?,?)", (list_id, rank, gid))
+    con.commit()
+
+
+def rename_list(con, list_id, name):
+    con.execute("UPDATE lists SET name=? WHERE id=?", (name, list_id))
+    con.commit()
+
+
+def delete_list(con, list_id):
+    """Liste löschen. Spiele, die in keiner anderen Liste mehr stehen, samt Angeboten und Preisen mit entfernen."""
+    con.execute("DELETE FROM list_items WHERE list_id=?", (list_id,))
+    con.execute("DELETE FROM lists WHERE id=?", (list_id,))
+    orphans = "SELECT bgg_id FROM games WHERE bgg_id NOT IN (SELECT bgg_id FROM list_items)"
+    con.execute(f"DELETE FROM offers WHERE bgg_id IN ({orphans})")
+    con.execute(f"DELETE FROM games WHERE bgg_id IN ({orphans})")
     con.commit()

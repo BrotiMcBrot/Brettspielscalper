@@ -67,22 +67,37 @@ def parse_items(data):
     return out
 
 
-def find_offers(names, exclude=(), need_context=False):
-    """Gebrauchte/neue Angebote auf eBay.de (Artikelstandort Deutschland). -> (passende Angebote, Anzahl gelesen)"""
+def _search(name, extra_filter=""):
     headers = {"Authorization": f"Bearer {_get_token()}", "X-EBAY-C-MARKETPLACE-ID": "EBAY_DE",
                "Accept-Language": "de-DE"}
+    r = requests.get(SEARCH_URL, headers=headers, timeout=25, params={
+        "q": name, "limit": 50, "filter": "itemLocationCountry:DE,priceCurrency:EUR" + extra_filter})
+    if r.status_code == 429:
+        raise RuntimeError("eBay: Tageslimit der API erreicht.")
+    if r.status_code != 200:
+        raise RuntimeError(f"eBay: HTTP {r.status_code} für '{name}'")
+    time.sleep(0.3)
+    return parse_items(r.json())
+
+
+def new_price(names, exclude=(), need_context=False):
+    """Neupreis aus eBay-Sofortkauf-Angeboten im Zustand „Neu“: Median der 3 günstigsten passenden. -> (preis, notiz) oder None"""
+    for name in names:
+        items = [o for o in _search(name, ",conditionIds:{1000},buyingOptions:{FIXED_PRICE}")
+                 if o["price"] >= 5 and matches(name, o["title"], exclude, need_context)]
+        if items:
+            cheapest = sorted(o["price"] for o in items)[:3]
+            return cheapest[len(cheapest) // 2], f"eBay neu (Median der {len(cheapest)} günstigsten Sofortkauf-Angebote)"
+    return None
+
+
+def find_offers(names, exclude=(), need_context=False):
+    """Gebrauchte/neue Angebote auf eBay.de (Artikelstandort Deutschland). -> (passende Angebote, Anzahl gelesen)"""
     found, raw_n = {}, 0
     for name in names:
-        r = requests.get(SEARCH_URL, headers=headers, timeout=25, params={
-            "q": name, "limit": 50, "filter": "itemLocationCountry:DE,priceCurrency:EUR"})
-        if r.status_code == 429:
-            raise RuntimeError("eBay: Tageslimit der API erreicht.")
-        if r.status_code != 200:
-            raise RuntimeError(f"eBay: HTTP {r.status_code} für '{name}'")
-        items = parse_items(r.json())
+        items = _search(name)
         raw_n += len(items)
         for o in items:
             if o["price"] >= 3 and matches(name, o["title"], exclude, need_context):
                 found[o["ad_id"]] = o
-        time.sleep(0.3)
     return list(found.values()), raw_n

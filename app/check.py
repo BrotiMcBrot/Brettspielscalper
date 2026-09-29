@@ -4,7 +4,7 @@ import re
 
 from bs4 import BeautifulSoup
 
-from . import bgg, ebay, http, kleinanzeigen, shops
+from . import bgg, bgprices, ebay, http, kleinanzeigen, mydealz, shops
 
 DEBUG_DIR = os.path.join(os.path.dirname(__file__), "..", "data", "debug")
 SAMPLE = "Brass Birmingham"
@@ -44,6 +44,12 @@ def _probe(label, url, parser):
 def run():
     out = _probe("bgg", "https://boardgamegeek.com/browse/boardgame", bgg.parse_ranking)
     out += _probe("kleinanzeigen", kleinanzeigen.search_url(SAMPLE, kleinanzeigen.GAMES_CATEGORY), kleinanzeigen.parse_results)
+    prices, err = bgprices.fetch([224517])  # Brass: Birmingham
+    out.append("== BoardGamePrices-API (experimentell): " + (err or (f"OK: {prices[224517][0]:.2f} € – {prices[224517][1]}"
+                                                                     if 224517 in prices else "Antwort ohne Preis")))
+    deals, errs = mydealz.fetch_all()
+    out.append(f"== mydealz-RSS: {len(deals)} Brettspiel-Deals gelesen" + (f" – {'; '.join(errs)}" if errs else ""))
+    out += [f"     - {d['price']:.2f} € {d['title'][:80]}" for d in deals[:3]]
     for shop in shops.load():
         out += _probe_shop(shop)
     out.append("== eBay-API: " + ("eingerichtet" if ebay.configured() else "nicht eingerichtet (optional, siehe README)"))
@@ -60,18 +66,24 @@ def _probe_shop(shop):
     lines = [f"== Shop {shop['name']}"]
     from urllib.parse import quote_plus
     try:  # Suchseite für die Fehlersuche ablegen
-        r = http.get(shop["search_url"].replace("{q}", quote_plus(SAMPLE)))
+        template = shops.search_url(shop)
+        if not template:
+            return lines + ["   keine funktionierende Such-Adresse gefunden (Muster aus app/shops.py passen nicht)"]
+        r = http.get(template.replace("{q}", quote_plus(SAMPLE)))
         os.makedirs(DEBUG_DIR, exist_ok=True)
         path = os.path.abspath(os.path.join(DEBUG_DIR, "shop_" + re.sub(r"\W+", "_", shop["name"]) + ".html"))
         open(path, "w", encoding="utf-8").write(r.text)
         lines.append(f"   Suchseite: HTTP {r.status_code}, landet auf {r.url} – gespeichert: {path}")
-    except Exception:
-        pass
+    except http.Blocked as e:
+        return lines + [f"   BLOCKIERT: {e}"]
+    except Exception as e:
+        return lines + [f"   FEHLER: {e}"]
     try:
         found = shops.find_price([SAMPLE], [shop], blocked := {})
     except Exception as e:
         return lines + [f"   FEHLER: {e}"]
     if blocked:
         return lines + [f"   BLOCKIERT: {next(iter(blocked.values()))}"]
-    return lines + [f"   OK: {found[0]:.2f} € – {found[1]}" if found else
+    kind = "Gebraucht-Händler" if (shop.get("type") or "new") == "used" else "Neupreis-Shop"
+    return lines + [f"   {kind} OK: {found[0]:.2f} € – {found[1]}" if found else
                     "   kein Preis gefunden (Such-URL falsch, keine strukturierten Daten, oder Spiel nicht im Sortiment)"]
