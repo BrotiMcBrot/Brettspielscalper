@@ -17,6 +17,11 @@ Die App läuft komplett lokal auf deinem Rechner, Daten liegen in `data/app.db` 
 
 ## 2. Starten
 
+**Am einfachsten:** im Projektordner `./start.sh` ausführen – holt Updates, installiert alles und öffnet den Browser.
+`./start.sh check` führt die Diagnose aus.
+
+Oder von Hand:
+
     python -m app serve
 
 Dann im Browser **http://127.0.0.1:5000** öffnen. Beenden mit `Strg+C`.
